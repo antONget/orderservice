@@ -50,11 +50,12 @@ async def process_change_channel(message: Message, state: FSMContext) -> None:
 
 
 @router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.channel))
-async def process_change_list_users(message: Message) -> None:
+async def process_change_list_users(message: Message, state: FSMContext) -> None:
     logging.info(f'process_change_list_users: {message.chat.id}')
     await message.answer(text=f'Вы установили канал/чат id={message.text} для получения отчетов! '
                               f'Убедитесь что бот имеет права администратора в этом канале')
     add_channel(message.text)
+    await state.set_state(default_state)
 
 
 # УСЛУГА
