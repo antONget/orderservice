@@ -1,0 +1,42 @@
+from aiogram import Router, F
+from aiogram.filters import Command, CommandStart, StateFilter
+from aiogram.types import Message
+from lexicon.lexicon_ru import MESSAGE_TEXT
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup, default_state
+from keyboards.keyboards import *
+from aiogram.types import CallbackQuery
+from secrets import token_urlsafe
+import asyncio
+from aiogram import Bot
+import logging
+from config_data.config import Config, load_config
+from module.data_base import check_token
+
+router = Router()
+# Загружаем конфиг в переменную config
+config: Config = load_config()
+
+
+class User(StatesGroup):
+    get_token = State()
+    auth_token = State()
+
+
+# запуск бота пользователем /start
+@router.message(CommandStart())
+async def process_start_command_user(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_start_command_user: {message.chat.id}')
+    await message.answer(text='Для авторизации в боте пришлите токен который вам отправил администратор')
+    await state.set_state(User.get_token)
+
+
+# проверяем TOKEN
+@router.message(F.text, StateFilter(User.get_token))
+async def get_token_user(message: Message, state: FSMContext) -> None:
+    logging.info(f'get_token_user: {message.chat.id}')
+    if check_token(message):
+        await message.answer(text='Вы добавлены')
+        await state.set_state(User.auth_token)
+    else:
+        await message.answer(text='TOKEN не прошел верификацию. Попробуйте с другим токеном')
