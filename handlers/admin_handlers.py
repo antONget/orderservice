@@ -13,7 +13,8 @@ import logging
 from config_data.config import Config, load_config
 from module.data_base import check_command_for_admins, table_users, add_token, table_channel, add_channel,\
     get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins,\
-    table_services, add_services, get_list_services, delete_services, update_service
+    table_services, add_services, get_list_services, delete_services, update_service, get_cost_service, table_orders,\
+    add_orders
 
 router = Router()
 # Загружаем конфиг в переменную config
@@ -26,6 +27,8 @@ class Stage(StatesGroup):
     cost_services = State()
     edit_title_service = State()
     edit_cost_service = State()
+    set_comment_service = State()
+    select_count_people = State()
 
 # запуск бота только администраторами /start
 @router.message(CommandStart(), lambda message: check_command_for_admins(message))
@@ -80,7 +83,7 @@ async def process_change_list_services(message: Message) -> None:
                          reply_markup=keyboard_edit_select_services())
 
 
-# Редактировать -> [Добавить][Изменить]
+# УСЛУГА -> Редактировать -> [Добавить][Изменить]
 @router.callback_query(F.data == 'edit_services')
 async def process_edit_list_services(callback: CallbackQuery) -> None:
     logging.info(f'process_edit_list_services: {callback.message.chat.id}')
@@ -88,7 +91,7 @@ async def process_edit_list_services(callback: CallbackQuery) -> None:
                                   reply_markup=keyboard_edit_services())
 
 
-# Добавить услугу
+# УСЛУГА Добавить услугу
 @router.callback_query(F.data == 'append_services')
 async def process_append_services(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'process_append_services: {callback.message.chat.id}')
@@ -96,7 +99,7 @@ async def process_append_services(callback: CallbackQuery, state: FSMContext) ->
     await state.set_state(Stage.title_services)
 
 
-# Получаем название услуги
+# УСЛУГА Получаем название услуги
 @router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.title_services))
 async def process_get_title_services(message: Message, state: FSMContext) -> None:
     logging.info(f'process_append_services: {message.chat.id}')
@@ -247,6 +250,136 @@ async def process_continue_edit_service(callback: CallbackQuery) -> None:
 async def process_finish_edit_services(callback: CallbackQuery) -> None:
     await process_start_command(callback.message)
 
+
+# УСЛУГА -> Выбрать
+@router.callback_query(F.data == 'select_services')
+async def process_select_services(callback: CallbackQuery) -> None:
+    logging.info(f'process_select_services: {callback.message.chat.id}')
+    table_orders()
+    list_services = get_list_services()
+    back = 0
+    forward = 2
+    count_item = 6
+    keyboard = keyboards_select_services(list_services, back, forward, count_item)
+    await callback.message.answer(text='Выберите услугу из базы для добавления в заказ',
+                                  reply_markup=keyboard)
+
+
+# >>>>
+@router.callback_query(F.data.startswith('serviceselectforward'))
+async def process_serviceselectforward(callback: CallbackQuery) -> None:
+    logging.info(f'process_serviceselectforward: {callback.message.chat.id}')
+    list_services = get_list_services()
+    forward = int(callback.data.split('_')[1]) + 1
+    back = forward - 2
+    count_item = 6
+    keyboard = keyboards_edit_services(list_services, back, forward, count_item)
+    try:
+        await callback.message.edit_text(text='Выберите услугу из базы для добавления в заказ',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите услугу из базы для добавления в заказ.',
+                                         reply_markup=keyboard)
+
+
+# <<<<
+@router.callback_query(F.data.startswith('serviceselectback'))
+async def process_serviceselectback(callback: CallbackQuery) -> None:
+    logging.info(f'process_serviceselectback: {callback.message.chat.id}')
+    list_services = get_list_services()
+    back = int(callback.data.split('_')[1]) - 1
+    forward = back + 2
+    count_item = 6
+    keyboard = keyboards_edit_services(list_services, back, forward, count_item)
+    try:
+        await callback.message.edit_text(text='Выберите услугу из базы для добавления в заказ',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите услугу из базы для добавления в заказ.',
+                                         reply_markup=keyboard)
+
+
+# добавление услуги в заказ
+@router.callback_query(F.data.startswith('serviceselect'))
+async def process_serviceselect(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_serviceselect: {callback.message.chat.id}')
+    title_service = callback.data.split('_')[1]
+    await state.update_data(select_title_service=title_service)
+    cost = get_cost_service(title_service)
+    await state.update_data(select_cost_service=cost)
+    await callback.message.answer(text=f'Выбрана услуга <b>{title_service}</b>,\n стоимость выполнения для одного'
+                                       f' исполнителя <b>{cost}</b>',
+                                  reply_markup=keyboard_continue_orders())
+
+
+@router.callback_query(F.data == 'back_odrers')
+async def process_back_odrers(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_back_odrers: {callback.message.chat.id}')
+    await process_select_services(callback)
+
+
+@router.callback_query(F.data == 'continue_orders')
+async def process_continue_orders(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_continue_orders: {callback.message.chat.id}')
+    await callback.message.answer(text=f'Добавьте комментарий к заказу')
+    await state.set_state(Stage.set_comment_service)
+
+
+@router.message(F.text, StateFilter(Stage.set_comment_service))
+async def process_get_comment(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_get_comment: {message.chat.id}')
+    await state.update_data(select_comment_service=message.text)
+    await message.answer(text=f'Сколько исполнителей требуется для выполнения заказа? Количество по умолчанию 1',
+                         reply_markup=keyboard_count_people())
+    await state.update_data(select_countpeople_service=1)
+    await state.set_state(Stage.select_count_people)
+
+
+@router.callback_query(F.data == 'pass_people')
+async def process_send_orders(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_send_orders: {callback.message.chat.id}')
+    user_dict[callback.message.chat.id] = await state.get_data()
+    await callback.message.answer(text=f'Заказа на услугу <b>{user_dict[callback.message.chat.id]["select_title_service"]}</b>\n'
+                                       f'стоимостью <b>{user_dict[callback.message.chat.id]["select_cost_service"]}</b>\n'
+                                       f'для {user_dict[callback.message.chat.id]["select_countpeople_service"]} исполнителей сформирован.\n'
+                                       f'Комментарий: {user_dict[callback.message.chat.id]["select_comment_service"]}',
+                                  reply_markup=keyboard_finish_orders())
+
+
+@router.message(F.text, StateFilter(Stage.select_count_people))
+async def process_get_count_people(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_get_count_people: {message.chat.id}')
+    await state.update_data(select_countpeople_service=int(message.text))
+
+    user_dict[message.chat.id] = await state.get_data()
+    await message.answer(text=f'Заказа на услугу <b>{user_dict[message.chat.id]["select_title_service"]}</b>\n'
+                              f'стоимостью <b>{user_dict[message.chat.id]["select_cost_service"]}</b>\n'
+                              f'для {user_dict[message.chat.id]["select_countpeople_service"]} исполнителей сформирован.\n'
+                              f'Комментарий: {user_dict[message.chat.id]["select_comment_service"]}',
+                         reply_markup=keyboard_finish_orders())
+
+@router.callback_query(F.data == 'cancel_orders')
+async def process_cancel_odrers(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_cancel_odrers: {callback.message.chat.id}')
+    await process_select_services(callback)
+
+
+@router.callback_query(F.data == 'send_orders')
+async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    logging.info(f'process_send_orders_all: {callback.message.chat.id}')
+    add_orders(title_services=user_dict[callback.message.chat.id]["select_title_service"],
+               cost_services=user_dict[callback.message.chat.id]["select_cost_service"],
+               comment=user_dict[callback.message.chat.id]["select_comment_service"],
+               count_people=user_dict[callback.message.chat.id]["select_countpeople_service"])
+    list_sendler = get_list_users()
+    for row in list_sendler:
+        await bot.send_message(chat_id=row[0],
+                               text=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
+                                    f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
+                                    f'Комментарий {user_dict[callback.message.chat.id]["select_comment_service"]}\n'
+                                    f'Готовы выполнить?',
+                               reply_markup=keyboard_ready_player())
+    await state.set_state(default_state)
 
 # ПОЛЬЗОВАТЕЛЬ
 @router.message(F.text == 'Пользователь', lambda message: check_command_for_admins(message))

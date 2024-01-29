@@ -365,3 +365,102 @@ def keyboard_finish_edit_service() -> None:
         inline_keyboard=[[button_1, button_2]],
     )
     return keyboard
+
+# УСЛУГА -> Выбрать
+def keyboards_select_services(list_services, back, forward, count):
+    logging.info(f'keyboards_select_services')
+    # проверка чтобы не ушли в минус
+    if back < 0:
+        back = 0
+        forward = 2
+    # считаем сколько всего блоков по заданному количество элементов в блоке
+    count_users = len(list_services)
+    whole = count_users // count
+    remains = count_users % count
+    max_forward = whole + 1
+    # если есть остаток то увеличиваем количество блоков на один, чтобы показать остаток
+    if remains:
+        max_forward = whole + 2
+    if forward > max_forward:
+        forward = max_forward
+        back = forward - 2
+    kb_builder = InlineKeyboardBuilder()
+    buttons = []
+    print(list_services, count_users, back, forward, max_forward)
+    for row in list_services[back*count:(forward-1)*count]:
+        print(row)
+        text = row[0]
+        button = f'serviceselect_{row[0]}'
+        buttons.append(InlineKeyboardButton(
+            text=text,
+            callback_data=button))
+    button_back = InlineKeyboardButton(text='<<<<',
+                                       callback_data=f'serviceselectback_{str(back)}')
+    button_count = InlineKeyboardButton(text=f'{back+1}',
+                                        callback_data='none')
+    button_next = InlineKeyboardButton(text='>>>>',
+                                       callback_data=f'serviceselectforward_{str(forward)}')
+
+    kb_builder.row(*buttons, width=1)
+    kb_builder.row(button_back, button_count, button_next)
+
+    return kb_builder.as_markup()
+
+
+# Завершение процедуры редактирование услуги
+def keyboard_continue_orders() -> None:
+    """
+    Клавиатура для вовращения после редактирования
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Далее',
+                                    callback_data='continue_orders')
+    button_2 = InlineKeyboardButton(text='Назад',
+                                    callback_data='back_odrers')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1, button_2]],
+    )
+    return keyboard
+
+
+def keyboard_count_people() -> None:
+    """
+    Клавиатура для вовращения после редактирования
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Продолжить',
+                                    callback_data='pass_people')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1]],
+    )
+    return keyboard
+
+
+def keyboard_finish_orders() -> None:
+    """
+    Клавиатура для вовращения после редактирования
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Разослать',
+                                    callback_data='send_orders')
+    button_2 = InlineKeyboardButton(text='Отмена',
+                                    callback_data='cancel_orders')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1, button_2]],
+    )
+    return keyboard
+
+
+def keyboard_ready_player() -> None:
+    """
+    Клавиатура для вовращения после редактирования
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Да',
+                                    callback_data='ready')
+    button_2 = InlineKeyboardButton(text='Нет',
+                                    callback_data='no_ready')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1, button_2]],
+    )
+    return keyboard

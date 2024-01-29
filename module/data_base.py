@@ -51,6 +51,22 @@ def table_services() -> None:
     db.commit()
 
 
+def table_orders() -> None:
+    """
+    Создание таблицы администраторов
+    :return: None
+    """
+    sql.execute("""CREATE TABLE IF NOT EXISTS orders(
+        id INTEGER PRIMARY KEY,
+        title_services TEXT,
+        cost_services INTEGER,
+        comment TEXT,
+        count_people INTEGER,
+        players TEXT
+    )""")
+    db.commit()
+
+
 # УСЛУГИ - добавление услуги
 def add_services(title_services, cost_services) -> None:
     sql.execute(f'INSERT INTO services (title_services, cost_services) '
@@ -80,10 +96,20 @@ def delete_services(title_services):
     db.commit()
 
 
+# УСЛУГИ - обновление названия и стоимости услуги
 def update_service(title_services, title_services_new, cost):
     sql.execute('UPDATE services SET title_services = ?, cost_services = ? WHERE title_services = ?',
                 (title_services_new, cost, title_services))
     db.commit()
+
+
+# УСЛУГИ - получение стоимости услуги
+def get_cost_service(title_services) -> int:
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    return sql.execute('SELECT cost_services FROM services WHERE title_services = ?', (title_services,)).fetchone()[0]
 
 
 # ПОЛЬЗОВАТЕЛЬ - проверка на админа
@@ -237,3 +263,9 @@ def set_notadmins(telegram_id):
     sql.execute('UPDATE users SET is_admin = ? WHERE telegram_id = ?', (0, telegram_id))
     db.commit()
 
+
+# ЗАКАЗ - создание нового заказа
+def add_orders(title_services, cost_services, comment, count_people) -> None:
+    sql.execute(f'INSERT INTO orders (title_services, cost_services, comment, count_people, players) '
+                f'VALUES ("{title_services}", "{cost_services}", "{comment}", "{count_people}", "players")')
+    db.commit()
