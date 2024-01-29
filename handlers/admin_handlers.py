@@ -89,7 +89,7 @@ async def process_change_list_users(message: Message) -> None:
 async def process_description(callback: CallbackQuery) -> None:
     token_new = str(token_urlsafe(8))
     add_token(token_new)
-    await callback.message.answer(text=f'Для добавления пользователя в бот отправьте ему этот TOKEN {token_new}.'
+    await callback.message.answer(text=f'Для добавления пользователя в бот отправьте ему этот TOKEN <b>{token_new}</b>.'
                                        f' По этому TOKEN может быть добавлен только один пользователь,'
                                        f' не делитесь и не показывайте его никому, кроме тех лиц для кого он предназначен')
 
