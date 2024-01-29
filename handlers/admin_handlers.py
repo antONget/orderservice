@@ -13,7 +13,7 @@ import logging
 from config_data.config import Config, load_config
 from module.data_base import check_command_for_admins, table_users, add_token, table_channel, add_channel,\
     get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins,\
-    table_services, add_services, get_list_services, delete_services
+    table_services, add_services, get_list_services, delete_services, update_service
 
 router = Router()
 # Загружаем конфиг в переменную config
@@ -24,7 +24,8 @@ class Stage(StatesGroup):
     channel = State()
     title_services = State()
     cost_services = State()
-
+    edit_title_service = State()
+    edit_cost_service = State()
 
 # запуск бота только администраторами /start
 @router.message(CommandStart(), lambda message: check_command_for_admins(message))
@@ -175,6 +176,7 @@ async def process_servicesedit(callback: CallbackQuery, state: FSMContext) -> No
     logging.info(f'process_servicesedit: {callback.message.chat.id}')
     title_service = callback.data.split('_')[1]
     await state.update_data(edit_title_service=title_service)
+    await state.update_data(edit_title_service_new=title_service)
     await callback.message.answer(text=f'Что нужно сделать с услугой <b>{title_service}</b>',
                                   reply_markup=keyboard_edit_list_services())
 
@@ -189,6 +191,61 @@ async def process_delete_services(callback: CallbackQuery, state: FSMContext) ->
                                        f' успешно удалена')
     await process_change_list_services(callback.message)
 
+
+# УСЛУГА - модификация услуги
+@router.callback_query(F.data == 'modification_services')
+async def process_modification_services(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_modification_services: {callback.message.chat.id}')
+    user_dict[callback.message.chat.id] = await state.get_data()
+    await callback.message.answer(text=f'Введите новое название для услуги '
+                                       f'<b>{user_dict[callback.message.chat.id]["edit_title_service"]}</b>, '
+                                       f'или переходите к изменению стоимости ее выполнения',
+                                  reply_markup=keyboard_pass_edit_title_services())
+    await state.set_state(Stage.edit_title_service)
+
+
+@router.callback_query(F.data == 'pass_edit_service', StateFilter(Stage.edit_title_service))
+async def process_pass_edit_service(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_pass_edit_service: {callback.message.chat.id}')
+    await state.set_state(default_state)
+    await callback.message.answer(text=f'Укажите стоимость выполнения услуги '
+                                       f'<b>{user_dict[callback.message.chat.id]["edit_title_service"]}</b>')
+    await state.set_state(Stage.edit_cost_service)
+
+
+# Получаем наименование услуги
+@router.message(F.text, StateFilter(Stage.edit_title_service))
+async def process_get_edittitle_services(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_get_edittitle_services: {message.chat.id}')
+    await state.update_data(edit_title_service_new=message.text)
+    user_dict[message.chat.id] = await state.get_data()
+    await message.answer(text=f'Укажите стоимость выполнения услуги '
+                              f'<b>{user_dict[message.chat.id]["edit_title_service_new"]}</b> для одного исполнителя')
+    await state.set_state(Stage.edit_cost_service)
+
+
+@router.message(F.text, StateFilter(Stage.edit_cost_service))
+async def process_get_editcost_services(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_get_editcost_services: {message.chat.id}')
+    update_service(title_services=user_dict[message.chat.id]["edit_title_service"],
+                   title_services_new=user_dict[message.chat.id]["edit_title_service_new"],
+                   cost=int(message.text))
+    await message.answer(text=f'Вы внесли изменения в услугу <b>{user_dict[message.chat.id]["edit_title_service_new"]}</b> '
+                              f'стоимость выполнения для одного исполнителя - {message.text}',
+                         reply_markup=keyboard_finish_edit_service())
+    await state.set_state(default_state)
+
+
+# возвращение к списку услуг для редактирования
+@router.callback_query(F.data == 'continue_edit_service')
+async def process_continue_edit_service(callback: CallbackQuery) -> None:
+    await process_change_services(callback)
+
+
+# выход из редактирования
+@router.callback_query(F.data == 'finish_edit_services')
+async def process_finish_edit_services(callback: CallbackQuery) -> None:
+    await process_start_command(callback.message)
 
 
 # ПОЛЬЗОВАТЕЛЬ

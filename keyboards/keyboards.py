@@ -328,9 +328,39 @@ def keyboard_edit_list_services() -> None:
     :return:
     """
     button_1 = InlineKeyboardButton(text='Редактировать',
-                                    callback_data='modif_services')
+                                    callback_data='modification_services')
     button_2 = InlineKeyboardButton(text='Удалить',
                                     callback_data='delete_services')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1, button_2]],
+    )
+    return keyboard
+
+
+# УСЛУГА -> Редактировать -> Изменить -> выбрана услуга для удаления или модификации
+def keyboard_pass_edit_title_services() -> None:
+    """
+    Клавиатура для пропуска редактирования названия услуги
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Пропустить',
+                                    callback_data='pass_edit_service')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1]],
+    )
+    return keyboard
+
+
+# Завершение процедуры редактирование услуги
+def keyboard_finish_edit_service() -> None:
+    """
+    Клавиатура для вовращения после редактирования
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Продолжить',
+                                    callback_data='continue_edit_service')
+    button_2 = InlineKeyboardButton(text='Завершить',
+                                    callback_data='finish_edit_services')
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[button_1, button_2]],
     )

@@ -80,6 +80,12 @@ def delete_services(title_services):
     db.commit()
 
 
+def update_service(title_services, title_services_new, cost):
+    sql.execute('UPDATE services SET title_services = ?, cost_services = ? WHERE title_services = ?',
+                (title_services_new, cost, title_services))
+    db.commit()
+
+
 # ПОЛЬЗОВАТЕЛЬ - проверка на админа
 def check_command_for_admins(message: Message) -> bool:
     """
