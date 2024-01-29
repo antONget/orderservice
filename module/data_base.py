@@ -9,6 +9,7 @@ db = sqlite3.connect('database.db', check_same_thread=False)
 sql = db.cursor()
 
 
+# СОЗДАНИЕ ТАБЛИЦ
 def table_users() -> None:
     """
     Создание таблицы администраторов
@@ -37,6 +38,49 @@ def table_channel() -> None:
     db.commit()
 
 
+def table_services() -> None:
+    """
+    Создание таблицы администраторов
+    :return: None
+    """
+    sql.execute("""CREATE TABLE IF NOT EXISTS services(
+        id INTEGER PRIMARY KEY,
+        title_services TEXT,
+        cost_services INTEGER
+    )""")
+    db.commit()
+
+
+# УСЛУГИ - добавление услуги
+def add_services(title_services, cost_services) -> None:
+    sql.execute(f'INSERT INTO services (title_services, cost_services) '
+                f'VALUES ("{title_services}", "{cost_services}")')
+    db.commit()
+
+
+# УСЛУГИ - получение списка названий услуг
+def get_list_services() -> list:
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('SELECT title_services FROM services')
+    list_username = [row for row in sql.fetchall()]
+    return list_username
+
+
+# УСЛУГИ - удалить услугу
+def delete_services(title_services):
+    """
+    Функция выдает информацию о запрашиваемом пользователе
+    :param telegram_id:
+    :return:
+    """
+    sql.execute('DELETE FROM services WHERE title_services = ?', (title_services,))
+    db.commit()
+
+
+# ПОЛЬЗОВАТЕЛЬ - проверка на админа
 def check_command_for_admins(message: Message) -> bool:
     """
     Функция проводит верификацию пользователя
@@ -51,6 +95,7 @@ def check_command_for_admins(message: Message) -> bool:
     return message.chat.id in telegram_ids or str(message.chat.id) == str(config.tg_bot.admin_ids)
 
 
+# ПОЛЬЗОВАТЕЛЬ - верификация токена
 def check_token(message: Message) -> bool:
     """
     Функция проводит верификацию пользователя по введенному TOKEN
@@ -74,6 +119,7 @@ def check_token(message: Message) -> bool:
     return False
 
 
+# ПОЛЬЗОВАТЕЛЬ - добавления сгенерированного токена
 def add_token(token_new) -> None:
     """
     Функция производит добавления пользователя в таблицу users
@@ -85,6 +131,7 @@ def add_token(token_new) -> None:
     db.commit()
 
 
+# КАНАЛ - правка канала
 def add_channel(channel) -> None:
     """
     Функция производит добавления пользователя в таблицу users
@@ -113,6 +160,7 @@ def add_channel(channel) -> None:
     db.commit()
 
 
+# ПОЛЬЗОВАТЕЛЬ - список пользователей верифицированных в боте
 def get_list_users() -> list:
     """
     Функция формирует список пользователей прошедших верефикацию
@@ -122,7 +170,7 @@ def get_list_users() -> list:
     list_username = [row for row in sql.fetchall()]
     return list_username
 
-
+# ПОЛЬЗОВАТЕЛЬ - имя пользователя по его id
 def get_user(telegram_id):
     """
     Функция выдает информацию о запрашиваемом пользователе
@@ -132,6 +180,7 @@ def get_user(telegram_id):
     return sql.execute('SELECT username FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()
 
 
+# ПОЛЬЗОВАТЕЛЬ - удалить пользователя
 def delete_user(telegram_id):
     """
     Функция выдает информацию о запрашиваемом пользователе
@@ -141,6 +190,8 @@ def delete_user(telegram_id):
     sql.execute('DELETE FROM users WHERE telegram_id = ?', (telegram_id,))
     db.commit()
 
+
+# АДМИНИСТРАТОРЫ - список администраторов
 def get_list_admins() -> list:
     """
     Функция формирует список пользователей прошедших верефикацию
@@ -151,6 +202,7 @@ def get_list_admins() -> list:
     return list_admins
 
 
+# АДМИНИСТРАТОРЫ - список пользователей не являющихся администраторами
 def get_list_notadmins() -> list:
     """
     Функция формирует список пользователей прошедших верефикацию
@@ -160,7 +212,7 @@ def get_list_notadmins() -> list:
     list_notadmins = [row for row in sql.fetchall()]
     return list_notadmins
 
-
+# АДМИНИСТРАТОРЫ - назначить пользователя администратором
 def set_admins(telegram_id):
     """
     Функция формирует список пользователей прошедших верефикацию
@@ -169,6 +221,8 @@ def set_admins(telegram_id):
     sql.execute('UPDATE users SET is_admin = ? WHERE telegram_id = ?', (1, telegram_id))
     db.commit()
 
+
+# АДМИНИСТРАТОРЫ - разжаловать пользователя из администраторов
 def set_notadmins(telegram_id):
     """
     Функция формирует список пользователей прошедших верефикацию

@@ -12,7 +12,8 @@ from aiogram import Bot
 import logging
 from config_data.config import Config, load_config
 from module.data_base import check_command_for_admins, table_users, add_token, table_channel, add_channel,\
-    get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins
+    get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins,\
+    table_services, add_services, get_list_services, delete_services
 
 router = Router()
 # Загружаем конфиг в переменную config
@@ -21,6 +22,8 @@ user_dict = {}
 
 class Stage(StatesGroup):
     channel = State()
+    title_services = State()
+    cost_services = State()
 
 
 # запуск бота только администраторами /start
@@ -29,7 +32,8 @@ async def process_start_command(message: Message) -> None:
     table_users()
     logging.info(f'process_start_command: {message.chat.id}')
     if str(message.chat.id) != str(config.tg_bot.admin_ids):
-        await message.answer(text=MESSAGE_TEXT['start'])
+        await message.answer(text=MESSAGE_TEXT['start'],
+                             reply_markup=keyboards_admin())
     else:
         await message.answer(text=MESSAGE_TEXT['superadmin'],
                              reply_markup=keyboards_superadmin())
@@ -52,9 +56,12 @@ async def process_change_channel(message: Message, state: FSMContext) -> None:
 @router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.channel))
 async def process_change_list_users(message: Message, state: FSMContext) -> None:
     logging.info(f'process_change_list_users: {message.chat.id}')
-    await message.answer(text=f'Вы установили канал/чат id={message.text} для получения отчетов! '
-                              f'Убедитесь что бот имеет права администратора в этом канале')
-    add_channel(message.text)
+    try:
+        add_channel(message.text)
+        await message.answer(text=f'Вы установили канал/чат id={message.text} для получения отчетов! '
+                                  f'Убедитесь что бот имеет права администратора в этом канале')
+    except:
+        await message.answer(text=f'Канал/чат id={message.text} не корректен')
     await state.set_state(default_state)
 
 
@@ -67,8 +74,121 @@ async def process_change_list_services(message: Message) -> None:
     :return:
     """
     logging.info(f'process_change_list_services: {message.chat.id}')
-    await message.answer(text=MESSAGE_TEXT['user'],
-                         reply_markup=keyboard_edit_list_user())
+    table_services()
+    await message.answer(text=MESSAGE_TEXT['services'],
+                         reply_markup=keyboard_edit_select_services())
+
+
+# Редактировать -> [Добавить][Изменить]
+@router.callback_query(F.data == 'edit_services')
+async def process_edit_list_services(callback: CallbackQuery) -> None:
+    logging.info(f'process_edit_list_services: {callback.message.chat.id}')
+    await callback.message.answer(text='Вы можете добавить услугу в базу или изменить уже созданные!',
+                                  reply_markup=keyboard_edit_services())
+
+
+# Добавить услугу
+@router.callback_query(F.data == 'append_services')
+async def process_append_services(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_append_services: {callback.message.chat.id}')
+    await callback.message.answer(text='Введите название услуги!')
+    await state.set_state(Stage.title_services)
+
+
+# Получаем название услуги
+@router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.title_services))
+async def process_get_title_services(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_append_services: {message.chat.id}')
+    await state.update_data(title_services=message.text)
+    await message.answer(text=f'Укажите стоимость выполнения услуги <b>{message.text}</b> для одного исполнителя')
+    await state.set_state(Stage.cost_services)
+
+
+# Получаем стоимость выполнения услуги одним человеком и заносим в БД
+@router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.cost_services))
+async def process_get_cost_services(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_get_cost_services: {message.chat.id}')
+    user_dict[message.chat.id] = await state.get_data()
+    await message.answer(text=f'Услуга <b>{user_dict[message.chat.id]["title_services"]}</b> стоимостью'
+                              f' <b>{message.text}</b> добавлена в базу',
+                         reply_markup=keyboard_confirmation_append_services())
+    add_services(user_dict[message.chat.id]["title_services"], int(message.text))
+    await state.set_state(default_state)
+
+
+# завершаем добавление услуг
+@router.callback_query(F.data == 'finish_services')
+async def process_finish_append_services(callback: CallbackQuery) -> None:
+    logging.info(f'process_append_services: {callback.message.chat.id}')
+    await process_change_list_services(callback.message)
+
+
+@router.callback_query(F.data == 'change_services')
+async def process_change_services(callback: CallbackQuery) -> None:
+    logging.info(f'process_change_services: {callback.message.chat.id}')
+    list_services = get_list_services()
+    back = 0
+    forward = 2
+    count_item = 6
+    keyboard = keyboards_edit_services(list_services, back, forward, count_item)
+    await callback.message.answer(text='Выберите услугу из базы',
+                                  reply_markup=keyboard)
+
+
+# >>>>
+@router.callback_query(F.data.startswith('serviceseditforward'))
+async def process_serviceseditforward(callback: CallbackQuery) -> None:
+    logging.info(f'process_serviceseditforward: {callback.message.chat.id}')
+    list_services = get_list_services()
+    forward = int(callback.data.split('_')[1]) + 1
+    back = forward - 2
+    count_item = 6
+    keyboard = keyboards_edit_services(list_services, back, forward, count_item)
+    try:
+        await callback.message.edit_text(text='Выберите услугу из базы',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите услугу из базы.',
+                                         reply_markup=keyboard)
+
+
+# <<<<
+@router.callback_query(F.data.startswith('serviceseditback'))
+async def process_serviceseditback(callback: CallbackQuery) -> None:
+    logging.info(f'process_serviceseditback: {callback.message.chat.id}')
+    list_services = get_list_services()
+    back = int(callback.data.split('_')[1]) - 1
+    forward = back + 2
+    count_item = 6
+    keyboard = keyboards_edit_services(list_services, back, forward, count_item)
+    try:
+        await callback.message.edit_text(text='Выберите услугу из базы',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите услугу из базы.',
+                                         reply_markup=keyboard)
+
+
+# удаление или модификация выбранной услуги
+@router.callback_query(F.data.startswith('servicesedit'))
+async def process_servicesedit(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_servicesedit: {callback.message.chat.id}')
+    title_service = callback.data.split('_')[1]
+    await state.update_data(edit_title_service=title_service)
+    await callback.message.answer(text=f'Что нужно сделать с услугой <b>{title_service}</b>',
+                                  reply_markup=keyboard_edit_list_services())
+
+
+# УСЛУГА - удаление услуги
+@router.callback_query(F.data == 'delete_services')
+async def process_delete_services(callback: CallbackQuery, state: FSMContext) -> None:
+    logging.info(f'process_delete_services: {callback.message.chat.id}')
+    user_dict[callback.message.chat.id] = await state.get_data()
+    delete_services(user_dict[callback.message.chat.id]['edit_title_service'])
+    await callback.message.answer(text=f'Услуга <b>{user_dict[callback.message.chat.id]["edit_title_service"]}</b>'
+                                       f' успешно удалена')
+    await process_change_list_services(callback.message)
+
 
 
 # ПОЛЬЗОВАТЕЛЬ
@@ -110,8 +230,12 @@ async def process_description(callback: CallbackQuery) -> None:
     forward = int(callback.data.split('_')[1]) + 1
     back = forward - 2
     keyboard = keyboards_del_users(list_user, back, forward, 2)
-    await callback.message.answer(text='Выберите пользователя, которого вы хотите удалить',
-                                  reply_markup=keyboard)
+    try:
+        await callback.message.edit_text(text='Выберите пользователя, которого вы хотите удалить',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите пользователя, которого нужно удалить',
+                                         reply_markup=keyboard)
 
 
 # <<<<
@@ -121,8 +245,12 @@ async def process_description(callback: CallbackQuery) -> None:
     back = int(callback.data.split('_')[1]) - 1
     forward = back + 2
     keyboard = keyboards_del_users(list_user, back, forward, 2)
-    await callback.message.answer(text='Выберите пользователя, которого вы хотите удалить',
-                                  reply_markup=keyboard)
+    try:
+        await callback.message.edit_text(text='Выберите пользователя, которого вы хотите удалить',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите пользователя, которого нужно удалить',
+                                         reply_markup=keyboard)
 
 
 # подтверждение удаления пользователя из базы
@@ -184,8 +312,12 @@ async def process_forwardadmin(callback: CallbackQuery) -> None:
     forward = int(callback.data.split('_')[1]) + 1
     back = forward - 2
     keyboard = keyboards_add_admin(list_admin, back, forward, 2)
-    await callback.message.answer(text='Выберите пользователя, которого вы хотите сделать администратором',
-                                  reply_markup=keyboard)
+    try:
+        await callback.message.edit_text(text='Выберите пользователя, которого вы хотите сделать администратором',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите пользователя, которого нужно сделать администратором',
+                                         reply_markup=keyboard)
 
 
 # <<<<
@@ -196,8 +328,12 @@ async def process_backadmin(callback: CallbackQuery) -> None:
     back = int(callback.data.split('_')[1]) - 1
     forward = back + 2
     keyboard = keyboards_add_admin(list_admin, back, forward, 2)
-    await callback.message.answer(text='Выберите пользователя, которого вы хотите сделать администратором',
-                                  reply_markup=keyboard)
+    try:
+        await callback.message.edit_text(text='Выберите пользователя, которого вы хотите сделать администратором',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите пользователя, которого нужно сделать администратором',
+                                         reply_markup=keyboard)
 
 
 # подтверждение добавления админа в список админов
@@ -246,8 +382,12 @@ async def process_forwarddeladmin(callback: CallbackQuery) -> None:
     forward = int(callback.data.split('_')[1]) + 1
     back = forward - 2
     keyboard = keyboards_del_admin(list_admin, back, forward, 2)
-    await callback.message.answer(text='Выберите пользователя, которого вы хотите разжаловать',
-                                  reply_markup=keyboard)
+    try:
+        await callback.message.edit_text(text='Выберите пользователя, которого вы хотите разжаловать',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите пользователя, которого нужно разжаловать',
+                                         reply_markup=keyboard)
 
 
 # <<<<
@@ -258,8 +398,12 @@ async def process_backdeladmin(callback: CallbackQuery) -> None:
     back = int(callback.data.split('_')[1]) - 1
     forward = back + 2
     keyboard = keyboards_del_admin(list_admin, back, forward, 2)
-    await callback.message.answer(text='Выберите пользователя, которого вы хотите разжаловать',
-                                  reply_markup=keyboard)
+    try:
+        await callback.message.edit_text(text='Выберите пользователя, которого вы хотите разжаловать',
+                                         reply_markup=keyboard)
+    except:
+        await callback.message.edit_text(text='Выберите пользователя, которого нужно разжаловать',
+                                         reply_markup=keyboard)
 
 
 # подтверждение добавления админа в список админов
