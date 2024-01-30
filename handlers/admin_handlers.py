@@ -14,7 +14,7 @@ from config_data.config import Config, load_config
 from module.data_base import check_command_for_admins, table_users, add_token, table_channel, add_channel,\
     get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins,\
     table_services, add_services, get_list_services, delete_services, update_service, get_cost_service, table_orders,\
-    add_orders, get_row_services
+    add_orders, get_row_services, get_id_last_orders, update_list_sendlers
 
 router = Router()
 # Загружаем конфиг в переменную config
@@ -395,14 +395,21 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
                cost_services=row_services[0][1],
                comment=user_dict[callback.message.chat.id]["select_comment_service"],
                count_people=row_services[0][3])
+    id_orders = get_id_last_orders()
+
     list_sendler = get_list_users()
+    list_mailing = []
     for row in list_sendler:
-        await bot.send_message(chat_id=row[0],
-                               text=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
-                                    f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
-                                    f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
-                                    f'Готовы выполнить?',
-                               reply_markup=keyboard_ready_player())
+        msg = await bot.send_message(chat_id=row[0],
+                                     text=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
+                                          f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
+                                          f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
+                                          f'Готовы выполнить?',
+                                     reply_markup=keyboard_ready_player(id_order=id_orders[0]))
+        iduser_idmessage = f'{row[0]}_{msg.message_id}'
+        list_mailing.append(iduser_idmessage)
+    list_mailing_str = ','.join(list_mailing)
+    update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=id_orders[0])
     await state.set_state(default_state)
 
 # ПОЛЬЗОВАТЕЛЬ

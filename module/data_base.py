@@ -64,7 +64,8 @@ def table_orders() -> None:
         cost_services INTEGER,
         comment TEXT,
         count_people INTEGER,
-        players TEXT
+        players TEXT,
+        sendler TEXT
     )""")
     db.commit()
 
@@ -94,8 +95,8 @@ def get_row_services(title_services) -> list:
     :return:
     """
     sql.execute('SELECT * FROM services WHERE title_services = ?', (title_services,))
-    list_username = [row for row in sql.fetchall()]
-    return list_username
+    row_services = [row for row in sql.fetchall()]
+    return row_services
 
 
 # УСЛУГИ - удалить услугу
@@ -201,20 +202,30 @@ def add_channel(channel) -> None:
 
     if int(channel) in list_channel:
         print('такая группа есть в списке')
-        for ch in list_channel:
-            sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
-                        (0, ch))
+        # for ch in list_channel:
+        #     sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
+        #                 (0, ch))
         sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
                     (1, channel))
     else:
         print('группы нет в списке')
         sql.execute(f'INSERT INTO channel (channel_id, is_send)'
                     f'VALUES ("{channel}", 1)')
-        for ch in list_channel:
-            sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
-                        (0, ch))
+        # for ch in list_channel:
+        #     sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
+        #                 (0, ch))
 
     db.commit()
+
+
+def get_channel() -> int:
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('SELECT channel_id FROM channel')
+    channel_id = [row for row in sql.fetchall()]
+    return channel_id
 
 
 # ПОЛЬЗОВАТЕЛЬ - список пользователей верифицированных в боте
@@ -291,10 +302,57 @@ def set_notadmins(telegram_id):
 
 # ЗАКАЗ - создание нового заказа
 def add_orders(title_services, cost_services, comment, count_people) -> None:
-    sql.execute(f'INSERT INTO orders (title_services, cost_services, comment, count_people, players) '
-                f'VALUES ("{title_services}", "{cost_services}", "{comment}", "{count_people}", "players")')
+    sql.execute(f'INSERT INTO orders (title_services, cost_services, comment, count_people, players, sendler) '
+                f'VALUES ("{title_services}", "{cost_services}", "{comment}", "{count_people}", "players", "sendler")')
     db.commit()
 
+
+# ЗАКАЗЫ - получение заказа по ее id
+def get_row_orders_id(id_services) -> list:
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('SELECT * FROM orders WHERE id = ?', (id_services,))
+    row_services = [row for row in sql.fetchall()]
+    return row_services
+
+
+# ЗАКАЗЫ - получение id последнего заказа
+def get_id_last_orders() -> list:
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('SELECT id FROM orders')
+    row_id = [row for row in sql.fetchall()]
+    print(row_id)
+    return row_id[-1]
+
+
+# ЗАКАЗЫ - обновление списка исполнителей
+def update_list_players(players, id_orders):
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('UPDATE orders SET players = ? WHERE id = ?', (players, id_orders))
+    db.commit()
+
+
+# ЗАКАЗЫ - обновление списка рассылки
+def update_list_sendlers(list_mailing_str, id_orders):
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('UPDATE orders SET sendler = ? WHERE id = ?', (list_mailing_str, id_orders))
+    db.commit()
+
+
 if __name__ == '__main__':
-    table_users()
-    sql.execute('SELECT telegram_id FROM users WHERE is_admin = 1')
+    db = sqlite3.connect('/Users/antonponomarev/PycharmProjects/boiko/database.db', check_same_thread=False)
+    sql = db.cursor()
+    sql.execute('DROP TABLE IF EXISTS orders')
+    # table_users()
+    # sql.execute('SELECT telegram_id FROM users WHERE is_admin = 1')

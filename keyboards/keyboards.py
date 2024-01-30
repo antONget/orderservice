@@ -451,16 +451,30 @@ def keyboard_finish_orders() -> None:
     return keyboard
 
 
-def keyboard_ready_player() -> None:
+# клавиатура подтверждения готовности участия в заказе с id = id_services
+def keyboard_ready_player(id_order) -> None:
     """
     Клавиатура для вовращения после редактирования
     :return:
     """
     button_1 = InlineKeyboardButton(text='Да',
-                                    callback_data='ready_yes')
+                                    callback_data=f'ready_yes_{id_order}')
     button_2 = InlineKeyboardButton(text='Нет',
-                                    callback_data='ready_no')
+                                    callback_data=f'ready_no_{id_order}')
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[button_1, button_2]],
+    )
+    return keyboard
+
+
+def keyboard_send_report() -> None:
+    """
+    Клавиатура для вовращения после редактирования
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='ОТЧЕТ',
+                                    callback_data='report')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1]],
     )
     return keyboard
