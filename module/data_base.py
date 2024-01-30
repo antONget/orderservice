@@ -1,6 +1,7 @@
 import sqlite3
 from aiogram.types import Message
 from config_data.config import Config, load_config
+import logging
 
 # Загружаем конфиг в переменную config
 config: Config = load_config()
@@ -46,7 +47,8 @@ def table_services() -> None:
     sql.execute("""CREATE TABLE IF NOT EXISTS services(
         id INTEGER PRIMARY KEY,
         title_services TEXT,
-        cost_services INTEGER
+        cost_services INTEGER,
+        count_services INTEGER
     )""")
     db.commit()
 
@@ -68,9 +70,9 @@ def table_orders() -> None:
 
 
 # УСЛУГИ - добавление услуги
-def add_services(title_services, cost_services) -> None:
-    sql.execute(f'INSERT INTO services (title_services, cost_services) '
-                f'VALUES ("{title_services}", "{cost_services}")')
+def add_services(title_services, cost_services, count_services) -> None:
+    sql.execute(f'INSERT INTO services (title_services, cost_services, count_services) '
+                f'VALUES ("{title_services}", "{cost_services}", "{count_services}")')
     db.commit()
 
 
@@ -81,6 +83,17 @@ def get_list_services() -> list:
     :return:
     """
     sql.execute('SELECT title_services FROM services')
+    list_username = [row for row in sql.fetchall()]
+    return list_username
+
+
+# УСЛУГИ - получение услуги по ее названию
+def get_row_services(title_services) -> list:
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('SELECT * FROM services WHERE title_services = ?', (title_services,))
     list_username = [row for row in sql.fetchall()]
     return list_username
 
@@ -120,11 +133,27 @@ def check_command_for_admins(message: Message) -> bool:
     :return:
     """
     # Выполнение запроса для получения всех telegram_id из таблицы admins
-    sql.execute('SELECT telegram_id FROM users WHERE is_admin = 1')
+    sql.execute('SELECT telegram_id FROM users WHERE is_admin = ?', (1,))
+    # Извлечение результатов запроса и сохранение их в список
+    telegram_ids = [row[0] for row in sql.fetchall()]
+    print(telegram_ids)
+    # Закрытие соединения
+    return message.chat.id in telegram_ids or str(message.chat.id) == str(config.tg_bot.admin_ids)
+
+
+# ПОЛЬЗОВАТЕЛЬ - проверка на админа
+def check_command_for_user(message: Message) -> bool:
+    """
+    Функция проводит верификацию пользователя
+    :param message:
+    :return:
+    """
+    # Выполнение запроса для получения всех telegram_id из таблицы admins
+    sql.execute('SELECT telegram_id FROM users')
     # Извлечение результатов запроса и сохранение их в список
     telegram_ids = [row[0] for row in sql.fetchall()]
     # Закрытие соединения
-    return message.chat.id in telegram_ids or str(message.chat.id) == str(config.tg_bot.admin_ids)
+    return message.chat.id in telegram_ids
 
 
 # ПОЛЬЗОВАТЕЛЬ - верификация токена
@@ -153,11 +182,7 @@ def check_token(message: Message) -> bool:
 
 # ПОЛЬЗОВАТЕЛЬ - добавления сгенерированного токена
 def add_token(token_new) -> None:
-    """
-    Функция производит добавления пользователя в таблицу users
-    :param token_new:
-    :return: None
-    """
+    logging.info(f'add_token: {token_new}')
     sql.execute(f'INSERT INTO users (token_auth, telegram_id, username, is_admin) '
                 f'VALUES ("{token_new}", "telegram_id", "username", 0)')
     db.commit()
@@ -269,3 +294,7 @@ def add_orders(title_services, cost_services, comment, count_people) -> None:
     sql.execute(f'INSERT INTO orders (title_services, cost_services, comment, count_people, players) '
                 f'VALUES ("{title_services}", "{cost_services}", "{comment}", "{count_people}", "players")')
     db.commit()
+
+if __name__ == '__main__':
+    table_users()
+    sql.execute('SELECT telegram_id FROM users WHERE is_admin = 1')

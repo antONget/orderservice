@@ -14,21 +14,24 @@ from config_data.config import Config, load_config
 from module.data_base import check_command_for_admins, table_users, add_token, table_channel, add_channel,\
     get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins,\
     table_services, add_services, get_list_services, delete_services, update_service, get_cost_service, table_orders,\
-    add_orders
+    add_orders, get_row_services
 
 router = Router()
 # Загружаем конфиг в переменную config
 config: Config = load_config()
 user_dict = {}
 
+
 class Stage(StatesGroup):
     channel = State()
     title_services = State()
     cost_services = State()
+    count_services = State()
     edit_title_service = State()
     edit_cost_service = State()
     set_comment_service = State()
     select_count_people = State()
+
 
 # запуск бота только администраторами /start
 @router.message(CommandStart(), lambda message: check_command_for_admins(message))
@@ -56,7 +59,7 @@ async def process_change_channel(message: Message, state: FSMContext) -> None:
     table_channel()
     await state.set_state(Stage.channel)
 
-
+# КАНАЛ - добавление канала
 @router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.channel))
 async def process_change_list_users(message: Message, state: FSMContext) -> None:
     logging.info(f'process_change_list_users: {message.chat.id}')
@@ -91,7 +94,7 @@ async def process_edit_list_services(callback: CallbackQuery) -> None:
                                   reply_markup=keyboard_edit_services())
 
 
-# УСЛУГА Добавить услугу
+# УСЛУГА -> Редактировать -> Добавить
 @router.callback_query(F.data == 'append_services')
 async def process_append_services(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'process_append_services: {callback.message.chat.id}')
@@ -99,7 +102,7 @@ async def process_append_services(callback: CallbackQuery, state: FSMContext) ->
     await state.set_state(Stage.title_services)
 
 
-# УСЛУГА Получаем название услуги
+# УСЛУГА -> Редактировать -> Добавить - Получаем название услуги
 @router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.title_services))
 async def process_get_title_services(message: Message, state: FSMContext) -> None:
     logging.info(f'process_append_services: {message.chat.id}')
@@ -108,23 +111,39 @@ async def process_get_title_services(message: Message, state: FSMContext) -> Non
     await state.set_state(Stage.cost_services)
 
 
-# Получаем стоимость выполнения услуги одним человеком и заносим в БД
+# УСЛУГА -> Редактировать -> Добавить - Получаем стоимость выполнения услуги одним человеком и заносим в БД
 @router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.cost_services))
 async def process_get_cost_services(message: Message, state: FSMContext) -> None:
     logging.info(f'process_get_cost_services: {message.chat.id}')
+    await state.update_data(cost_services=message.text)
     user_dict[message.chat.id] = await state.get_data()
-    await message.answer(text=f'Услуга <b>{user_dict[message.chat.id]["title_services"]}</b> стоимостью'
-                              f' <b>{message.text}</b> добавлена в базу',
+    await message.answer(text=f'Укажите количество исполнителей для услуги '
+                              f'<b>{user_dict[message.chat.id]["title_services"]}</b> для одного исполнителя')
+    await state.set_state(Stage.count_services)
+
+
+# УСЛУГА -> Редактировать -> Добавить - Получаем количество исполнителей для услуги и заносим в базу
+@router.message(lambda message: check_command_for_admins(message), StateFilter(Stage.count_services))
+async def process_get_count_services(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_get_count_services: {message.chat.id}')
+    await state.update_data(count_services=message.text)
+    user_dict[message.chat.id] = await state.get_data()
+    add_services(user_dict[message.chat.id]["title_services"],
+                 int(user_dict[message.chat.id]["cost_services"]),
+                 int(user_dict[message.chat.id]["count_services"]))
+    await message.answer(text=f'<b>Услуга добавлена в базу:</b>\n\n'
+                              f'<i>Название услуги:</i> {user_dict[message.chat.id]["title_services"]}\n'
+                              f'<i>Стоимость услуги:</i> {user_dict[message.chat.id]["cost_services"]}\n'
+                              f'<i>Количество исполнителей:</i> {user_dict[message.chat.id]["count_services"]}\n',
                          reply_markup=keyboard_confirmation_append_services())
-    add_services(user_dict[message.chat.id]["title_services"], int(message.text))
     await state.set_state(default_state)
 
 
 # завершаем добавление услуг
-@router.callback_query(F.data == 'finish_services')
-async def process_finish_append_services(callback: CallbackQuery) -> None:
-    logging.info(f'process_append_services: {callback.message.chat.id}')
-    await process_change_list_services(callback.message)
+# @router.callback_query(F.data == 'finish_services')
+# async def process_finish_append_services(callback: CallbackQuery) -> None:
+#     logging.info(f'process_append_services: {callback.message.chat.id}')
+#     await process_change_list_services(callback.message)
 
 
 @router.callback_query(F.data == 'change_services')
@@ -325,38 +344,41 @@ async def process_continue_orders(callback: CallbackQuery, state: FSMContext) ->
     await state.set_state(Stage.set_comment_service)
 
 
+# @router.message(F.text, StateFilter(Stage.set_comment_service))
+# async def process_get_comment(message: Message, state: FSMContext) -> None:
+#     logging.info(f'process_get_comment: {message.chat.id}')
+#     await state.update_data(select_comment_service=message.text)
+#     await message.answer(text=f'Сколько исполнителей требуется для выполнения заказа? Количество по умолчанию 1',
+#                          reply_markup=keyboard_count_people())
+#     await state.update_data(select_countpeople_service=1)
+#     await state.set_state(Stage.select_count_people)
+#
+#
+# @router.callback_query(F.data == 'pass_people')
+# async def process_send_orders(callback: CallbackQuery, state: FSMContext) -> None:
+#     logging.info(f'process_send_orders: {callback.message.chat.id}')
+#     user_dict[callback.message.chat.id] = await state.get_data()
+#     await callback.message.answer(text=f'Заказа на услугу <b>{user_dict[callback.message.chat.id]["select_title_service"]}</b>\n'
+#                                        f'стоимостью <b>{user_dict[callback.message.chat.id]["select_cost_service"]}</b>\n'
+#                                        f'для {user_dict[callback.message.chat.id]["select_countpeople_service"]} исполнителей сформирован.\n'
+#                                        f'Комментарий: {user_dict[callback.message.chat.id]["select_comment_service"]}',
+#                                   reply_markup=keyboard_finish_orders())
+
+
 @router.message(F.text, StateFilter(Stage.set_comment_service))
-async def process_get_comment(message: Message, state: FSMContext) -> None:
-    logging.info(f'process_get_comment: {message.chat.id}')
-    await state.update_data(select_comment_service=message.text)
-    await message.answer(text=f'Сколько исполнителей требуется для выполнения заказа? Количество по умолчанию 1',
-                         reply_markup=keyboard_count_people())
-    await state.update_data(select_countpeople_service=1)
-    await state.set_state(Stage.select_count_people)
-
-
-@router.callback_query(F.data == 'pass_people')
-async def process_send_orders(callback: CallbackQuery, state: FSMContext) -> None:
-    logging.info(f'process_send_orders: {callback.message.chat.id}')
-    user_dict[callback.message.chat.id] = await state.get_data()
-    await callback.message.answer(text=f'Заказа на услугу <b>{user_dict[callback.message.chat.id]["select_title_service"]}</b>\n'
-                                       f'стоимостью <b>{user_dict[callback.message.chat.id]["select_cost_service"]}</b>\n'
-                                       f'для {user_dict[callback.message.chat.id]["select_countpeople_service"]} исполнителей сформирован.\n'
-                                       f'Комментарий: {user_dict[callback.message.chat.id]["select_comment_service"]}',
-                                  reply_markup=keyboard_finish_orders())
-
-
-@router.message(F.text, StateFilter(Stage.select_count_people))
 async def process_get_count_people(message: Message, state: FSMContext) -> None:
     logging.info(f'process_get_count_people: {message.chat.id}')
-    await state.update_data(select_countpeople_service=int(message.text))
+    await state.update_data(select_comment_service=message.text)
 
     user_dict[message.chat.id] = await state.get_data()
-    await message.answer(text=f'Заказа на услугу <b>{user_dict[message.chat.id]["select_title_service"]}</b>\n'
-                              f'стоимостью <b>{user_dict[message.chat.id]["select_cost_service"]}</b>\n'
-                              f'для {user_dict[message.chat.id]["select_countpeople_service"]} исполнителей сформирован.\n'
-                              f'Комментарий: {user_dict[message.chat.id]["select_comment_service"]}',
-                         reply_markup=keyboard_finish_orders())
+    await message.answer(text=f'<b>Заказ</b>:\n\n'
+                              f'Услуга: {user_dict[message.chat.id]["select_title_service"]}.\n'
+                              f'Стоимость {user_dict[message.chat.id]["select_cost_service"]}\n'
+                              f'Комментарий <code>{user_dict[message.chat.id]["select_comment_service"]}</code>\n'
+                              f'Опубликовать',
+                         reply_markup=keyboard_finish_orders(),
+                         parse_mode='html')
+
 
 @router.callback_query(F.data == 'cancel_orders')
 async def process_cancel_odrers(callback: CallbackQuery, state: FSMContext) -> None:
@@ -367,16 +389,18 @@ async def process_cancel_odrers(callback: CallbackQuery, state: FSMContext) -> N
 @router.callback_query(F.data == 'send_orders')
 async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     logging.info(f'process_send_orders_all: {callback.message.chat.id}')
+    row_services = get_row_services(user_dict[callback.message.chat.id]["select_title_service"])
+    print(row_services)
     add_orders(title_services=user_dict[callback.message.chat.id]["select_title_service"],
-               cost_services=user_dict[callback.message.chat.id]["select_cost_service"],
+               cost_services=row_services[0][1],
                comment=user_dict[callback.message.chat.id]["select_comment_service"],
-               count_people=user_dict[callback.message.chat.id]["select_countpeople_service"])
+               count_people=row_services[0][3])
     list_sendler = get_list_users()
     for row in list_sendler:
         await bot.send_message(chat_id=row[0],
                                text=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
                                     f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
-                                    f'Комментарий {user_dict[callback.message.chat.id]["select_comment_service"]}\n'
+                                    f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
                                     f'Готовы выполнить?',
                                reply_markup=keyboard_ready_player())
     await state.set_state(default_state)
@@ -396,10 +420,11 @@ async def process_change_list_users(message: Message) -> None:
 
 # добавить пользователя
 @router.callback_query(F.data == 'add_user')
-async def process_description(callback: CallbackQuery) -> None:
+async def process_add_user(callback: CallbackQuery) -> None:
+    logging.info(f'process_add_user: {callback.message.chat.id}')
     token_new = str(token_urlsafe(8))
     add_token(token_new)
-    await callback.message.answer(text=f'Для добавления пользователя в бот отправьте ему этот TOKEN <b>{token_new}</b>.'
+    await callback.message.answer(text=f'Для добавления пользователя в бот отправьте ему этот TOKEN <code>{token_new}</code>.'
                                        f' По этому TOKEN может быть добавлен только один пользователь,'
                                        f' не делитесь и не показывайте его никому, кроме тех лиц для кого он предназначен')
 
