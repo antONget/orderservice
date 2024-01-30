@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.filters import Command, CommandStart, StateFilter
+from aiogram.filters import CommandStart, StateFilter
 from aiogram.types import Message
 from lexicon.lexicon_ru import MESSAGE_TEXT
 from aiogram.fsm.context import FSMContext

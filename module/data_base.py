@@ -3,6 +3,7 @@ from aiogram.types import Message
 from config_data.config import Config, load_config
 import logging
 
+
 # Загружаем конфиг в переменную config
 config: Config = load_config()
 # можно использовать memory: вместо названия файла, чтобы хранить данные в оперативной памяти

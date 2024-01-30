@@ -3,7 +3,6 @@ import random
 from aiogram import Router, F, Bot
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.types import Message
-from lexicon.lexicon_ru import MESSAGE_TEXT
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup, default_state
 from keyboards.keyboards import *
