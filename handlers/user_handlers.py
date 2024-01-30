@@ -107,9 +107,9 @@ async def process_send_report(callback: CallbackQuery, state: FSMContext) -> Non
 @router.message(F.text, StateFilter(User.report))
 async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
     logging.info(f'get_token_user: {message.chat.id}')
-    # try:
-    chat_id = get_channel()[0][0]
-    print(chat_id)
-    await bot.send_message(chat_id=chat_id, text=f'{message.text}')
-    # except:
-    #     await message.answer(text=f'Отчет не отправлен')
+    try:
+        chat_id = get_channel()[0][0]
+        print(chat_id)
+        await bot.send_message(chat_id=chat_id, text=f'{message.text}')
+    except:
+        await message.answer(text=f'Отчет не отправлен')

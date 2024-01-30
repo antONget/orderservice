@@ -412,6 +412,7 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
     update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=id_orders[0])
     await state.set_state(default_state)
 
+
 # ПОЛЬЗОВАТЕЛЬ
 @router.message(F.text == 'Пользователь', lambda message: check_command_for_admins(message))
 async def process_change_list_users(message: Message) -> None:

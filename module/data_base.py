@@ -219,10 +219,7 @@ def add_channel(channel) -> None:
 
 
 def get_channel() -> int:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+
     sql.execute('SELECT channel_id FROM channel')
     channel_id = [row for row in sql.fetchall()]
     return channel_id
