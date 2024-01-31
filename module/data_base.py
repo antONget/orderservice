@@ -22,7 +22,8 @@ def table_users() -> None:
         token_auth TEXT,
         telegram_id INTEGER,
         username TEXT,
-        is_admin INTEGER
+        is_admin INTEGER,
+        is_busy INTEGER
     )""")
     db.commit()
 
@@ -186,8 +187,8 @@ def check_token(message: Message) -> bool:
 # ПОЛЬЗОВАТЕЛЬ - добавления сгенерированного токена
 def add_token(token_new) -> None:
     logging.info(f'add_token: {token_new}')
-    sql.execute(f'INSERT INTO users (token_auth, telegram_id, username, is_admin) '
-                f'VALUES ("{token_new}", "telegram_id", "username", 0)')
+    sql.execute(f'INSERT INTO users (token_auth, telegram_id, username, is_admin, is_busy) '
+                f'VALUES ("{token_new}", "telegram_id", "username", 0, 0)')
     db.commit()
 
 
@@ -259,6 +260,16 @@ def get_user(telegram_id):
     return sql.execute('SELECT username FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()
 
 
+# ПОЛЬЗОВАТЕЛЬ - получить занятость
+def get_busy_id(telegram_id):
+    """
+    Функция выдает информацию о запрашиваемом пользователе
+    :param telegram_id:
+    :return:
+    """
+    return sql.execute('SELECT is_busy FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()[0]
+
+
 # ПОЛЬЗОВАТЕЛЬ - удалить пользователя
 def delete_user(telegram_id):
     """
@@ -267,6 +278,16 @@ def delete_user(telegram_id):
     :return:
     """
     sql.execute('DELETE FROM users WHERE telegram_id = ?', (telegram_id,))
+    db.commit()
+
+
+# ПОЛЬЗОВАТЕЛЬ - установить занятость
+def set_busy_id(busy, telegram_id):
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('UPDATE users SET is_busy = ? WHERE telegram_id = ?', (busy, telegram_id))
     db.commit()
 
 

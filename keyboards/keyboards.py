@@ -273,7 +273,7 @@ def keyboard_confirmation_append_services() -> None:
     button_1 = InlineKeyboardButton(text='Добавить ещё',
                                     callback_data='edit_services')
     button_2 = InlineKeyboardButton(text='Закончить',
-                                    callback_data='change_services')
+                                    callback_data='finish_services')
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[button_1, button_2]],
     )

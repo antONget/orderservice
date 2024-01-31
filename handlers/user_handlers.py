@@ -1,7 +1,7 @@
 import random
 
 from aiogram import Router, F, Bot
-from aiogram.filters import Command, CommandStart, StateFilter
+from aiogram.filters import CommandStart, StateFilter
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup, default_state
@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery
 import json
 import asyncio
 from module.data_base import check_command_for_admins, table_users, check_command_for_user, get_row_orders_id, \
-    update_list_players, get_channel, get_list_admin
+    update_list_players, get_channel, get_list_admin, get_busy_id, set_busy_id
 import logging
 from config_data.config import Config, load_config
 from module.data_base import check_token
@@ -62,56 +62,65 @@ async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
 @router.callback_query(F.data.startswith('ready'))
 async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
     logging.info(f'process_pass_edit_service: {callback.message.chat.id}')
-    ready = callback.data.split('_')[1]
-    id_order = callback.data.split('_')[2]
-    # пользователь согласился выполнить заказ
-    if ready == 'yes':
-        # получаем информацию о заказе
-        info_orders = get_row_orders_id(int(id_order))
-
-        # требуемое количество исполнителей
-        count_players = info_orders[0][4]
-        # количество исполнителей готовых выполнить заказ len(players)
-        if info_orders[0][5] == 'players':
-            players = []
-        else:
-            players = info_orders[0][5].split(',')
-        # если количество исполнителей для услуги меньше готовых ее выполнить
-        if count_players > len(players):
-            # добавляем пользователя в список
-            players.append(f'{callback.from_user.username}.{callback.message.chat.id}')
-            # объединяем в строку
-            new_players = ','.join(players)
-            # обновляем заказ
-            update_list_players(new_players, int(id_order))
-            await callback.message.answer(text=f'Отлично вы в команде!')
-            # если пользователь был последним в списке
-            if not count_players - len(players):
-                # получаем информацию о заказе
-                info_orders = get_row_orders_id(int(id_order))
-                # список рассылки сообщения с заказом
-                list_sendler = info_orders[0][6].split(',')
-                print(list_sendler)
-                for row_sendler in list_sendler:
-                    # id чата и сообщения для удаления
-                    chat_id = row_sendler.split('_')[0]
-                    message_id = row_sendler.split('_')[1]
-                    # получаем список id исполнителей [@username.id_telegram.id_message]
-                    list_players = [row.split('.')[1] for row in info_orders[0][5].split(',')]
-                    # если пользователь не является исполнителем то удаляем у него заказ
-                    if chat_id not in list_players:
-                        await bot.delete_message(chat_id=chat_id,
-                                                 message_id=message_id)
-
-                await asyncio.sleep(5)
-                list_players = info_orders[0][5].split(',')
-                list_chat_id_player = [row.split('.')[1] for row in list_players]
-                number_random = random.choice(list_chat_id_player)
-                await bot.send_message(chat_id=int(number_random),
-                                       text='Отправьте отчет о проделанной работе',
-                                       reply_markup=keyboard_send_report(id_order))
+    # проверяем звнятость пользователя
+    # print(get_busy_id(callback.message.chat.id))
+    if get_busy_id(callback.message.chat.id):
+        await callback.message.answer(text='Вы не можете брать другие задание, пока не будет получен отчет!')
     else:
-        await callback.message.answer(text=f'Жаль, выполнит заказ другой')
+        set_busy_id(1, callback.message.chat.id)
+        ready = callback.data.split('_')[1]
+        id_order = callback.data.split('_')[2]
+        # пользователь согласился выполнить заказ
+        if ready == 'yes':
+            # получаем информацию о заказе
+            info_orders = get_row_orders_id(int(id_order))
+
+            # требуемое количество исполнителей
+            count_players = info_orders[0][4]
+            # количество исполнителей готовых выполнить заказ len(players)
+            if info_orders[0][5] == 'players':
+                players = []
+            else:
+                players = info_orders[0][5].split(',')
+            # если количество исполнителей для услуги меньше готовых ее выполнить
+            if count_players > len(players):
+                # добавляем пользователя в список
+                players.append(f'{callback.from_user.username}.{callback.message.chat.id}')
+                # объединяем в строку
+                new_players = ','.join(players)
+                # обновляем заказ
+                update_list_players(new_players, int(id_order))
+                await callback.message.answer(text=f'Отлично вы в команде!')
+                # если пользователь был последним в списке
+                if not count_players - len(players):
+                    # получаем информацию о заказе
+                    info_orders = get_row_orders_id(int(id_order))
+                    # список рассылки сообщения с заказом
+                    list_sendler = info_orders[0][6].split(',')
+                    print(list_sendler)
+                    for row_sendler in list_sendler:
+                        # id чата и сообщения для удаления
+                        chat_id = row_sendler.split('_')[0]
+                        message_id = row_sendler.split('_')[1]
+                        # получаем список id исполнителей [@username.id_telegram.id_message]
+                        list_players = [row.split('.')[1] for row in info_orders[0][5].split(',')]
+                        # если пользователь не является исполнителем то удаляем у него заказ
+                        if chat_id not in list_players:
+                            await bot.delete_message(chat_id=chat_id,
+                                                     message_id=message_id)
+                    list_admin = get_list_admin()
+                    for admin in list_admin:
+                        await bot.send_message(chat_id=int(admin[0][2]),
+                                               text=f'Заказ № {id_order} в работе!')
+                    await asyncio.sleep(5)
+                    list_players = info_orders[0][5].split(',')
+                    list_chat_id_player = [row.split('.')[1] for row in list_players]
+                    number_random = random.choice(list_chat_id_player)
+                    await bot.send_message(chat_id=int(number_random),
+                                           text='Отправьте отчет о проделанной работе',
+                                           reply_markup=keyboard_send_report(id_order))
+        else:
+            await callback.message.answer(text=f'Жаль, выполнит заказ другой')
 
 
 @router.callback_query(F.data.startswith('report'))
@@ -147,6 +156,7 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
         list_players.append(f'@{row.split(".")[0]} ({cost_order})')
         await bot.send_message(chat_id=int(row.split(".")[1]),
                                text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b> отправлен!')
+        set_busy_id(0, int(row.split(".")[1]))
     # for player in info_orders[0][5].split(','):
     #     await bot.delete_message(chat_id=int(row.split(".")[1]),
     #                              message_id=int(row.split(".")[2]))

@@ -20,7 +20,7 @@ router = Router()
 # Загружаем конфиг в переменную config
 config: Config = load_config()
 user_dict = {}
-
+table_users()
 
 class Stage(StatesGroup):
     channel = State()
@@ -140,10 +140,10 @@ async def process_get_count_services(message: Message, state: FSMContext) -> Non
 
 
 # завершаем добавление услуг
-# @router.callback_query(F.data == 'finish_services')
-# async def process_finish_append_services(callback: CallbackQuery) -> None:
-#     logging.info(f'process_append_services: {callback.message.chat.id}')
-#     await process_change_list_services(callback.message)
+@router.callback_query(F.data == 'finish_services')
+async def process_finish_append_services(callback: CallbackQuery) -> None:
+    logging.info(f'process_finish_append_services: {callback.message.chat.id}')
+    await process_change_list_services(callback.message)
 
 
 @router.callback_query(F.data == 'change_services')
@@ -261,13 +261,16 @@ async def process_get_editcost_services(message: Message, state: FSMContext) -> 
 # возвращение к списку услуг для редактирования
 @router.callback_query(F.data == 'continue_edit_service')
 async def process_continue_edit_service(callback: CallbackQuery) -> None:
+    logging.info(f'process_continue_edit_service: {callback.message.chat.id}')
     await process_change_services(callback)
 
 
 # выход из редактирования
 @router.callback_query(F.data == 'finish_edit_services')
 async def process_finish_edit_services(callback: CallbackQuery) -> None:
-    await process_start_command(callback.message)
+    logging.info(f'process_finish_edit_services: {callback.message.chat.id}')
+    # await process_start_command(callback.message)
+    await process_change_list_services(callback.message)
 
 
 # УСЛУГА -> Выбрать
