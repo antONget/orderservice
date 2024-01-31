@@ -23,8 +23,11 @@ config: Config = load_config()
 class User(StatesGroup):
     get_token = State()
     auth_token = State()
-    report = State()
+    report1 = State()
+    report2 = State()
 
+
+user_dict1 = {}
 
 # запуск бота пользователем /start
 @router.message(CommandStart())
@@ -84,37 +87,85 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
             await callback.message.answer(text=f'Отлично вы в команде!')
             # если пользователь был последним в списке
             if not count_players - len(players):
+                # получаем информацию о заказе
                 info_orders = get_row_orders_id(int(id_order))
+                # список рассылки сообщения с заказом
                 list_sendler = info_orders[0][6].split(',')
                 print(list_sendler)
                 for row_sendler in list_sendler:
+                    # id чата и сообщения для удаления
                     chat_id = row_sendler.split('_')[0]
                     message_id = row_sendler.split('_')[1]
-                    await bot.delete_message(chat_id=chat_id,
-                                             message_id=message_id)
+                    # получаем список id исполнителей [@username.id_telegram.id_message]
+                    list_players = [row.split('.')[1] for row in info_orders[0][5].split(',')]
+                    # если пользователь не является исполнителем то удаляем у него заказ
+                    if chat_id not in list_players:
+                        await bot.delete_message(chat_id=chat_id,
+                                                 message_id=message_id)
+
                 await asyncio.sleep(5)
                 list_players = info_orders[0][5].split(',')
                 list_chat_id_player = [row.split('.')[1] for row in list_players]
                 number_random = random.choice(list_chat_id_player)
                 await bot.send_message(chat_id=int(number_random),
                                        text='Отправьте отчет о проделанной работе',
-                                       reply_markup=keyboard_send_report())
+                                       reply_markup=keyboard_send_report(id_order))
     else:
         await callback.message.answer(text=f'Жаль, выполнит заказ другой')
 
-@router.callback_query(F.data == 'report')
+
+@router.callback_query(F.data.startswith('report'))
 async def process_send_report(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'process_send_report: {callback.message.chat.id}')
-    await callback.message.answer(text='Отправь отчет о проделанной работе')
-    await state.set_state(User.report)
+    await callback.message.answer(text='Какая выкладка у клиента?')
+    await state.update_data(id_order=callback.data.split('_')[1])
+    await state.set_state(User.report1)
 
 
-@router.message(F.text, StateFilter(User.report))
-async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
-    logging.info(f'get_token_user: {message.chat.id}')
+@router.message(F.text, StateFilter(User.report1))
+async def process_send_report1(message: Message, state: FSMContext, bot: Bot) -> None:
+    logging.info(f'process_send_report1: {message.chat.id}')
+    await state.update_data(report1=message.text)
+    await message.answer(text='Что было выдано на 1-й карте по завершению сопровождения?')
+    await state.set_state(User.report2)
+
+
+@router.message(F.text, StateFilter(User.report2))
+async def process_send_report2(message: Message, state: FSMContext, bot: Bot) -> None:
+    logging.info(f'process_send_report2: {message.chat.id}')
+    await state.update_data(report2=message.text)
+    user_dict1[message.chat.id] = await state.get_data()
+    info_orders = get_row_orders_id(int(user_dict1[message.chat.id]['id_order']))
+    print(info_orders)
+    title_order = info_orders[0][1]
+    cost_order = info_orders[0][2]
+
+    total = info_orders[0][2] * info_orders[0][4]
+    # получаем username иполнителей
+    list_players = []
+    for row in info_orders[0][5].split(','):
+        list_players.append(f'@{row.split(".")[0]} ({cost_order})')
+        await bot.send_message(chat_id=int(row.split(".")[1]),
+                               text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b> отправлен!')
+    # for player in info_orders[0][5].split(','):
+    #     await bot.delete_message(chat_id=int(row.split(".")[1]),
+    #                              message_id=int(row.split(".")[2]))
+    str_player = '\n'.join(list_players)
     try:
         chat_id = get_channel()[0][0]
         print(chat_id)
-        await bot.send_message(chat_id=chat_id, text=f'{message.text}')
+        await bot.send_message(chat_id=chat_id,
+                               text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b>\n\n'
+                                    f'<b>Выполнили: </b>\n'
+                                    f'{str_player}\n\n'
+                                    f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
+                                    f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n'
+                                    f'<b>Итого:</b> {total}')
     except:
-        await message.answer(text=f'Отчет не отправлен')
+        await message.answer(text=f'<b>ОТЧЁТ по услуге: {title_order}</b>\n\n'
+                                  f'<b>Выполнили: </b>\n'
+                                  f'{str_player}\n\n'
+                                  f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
+                                  f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n'
+                                  f'<b>Итого:</b> {total}')
+    await state.set_state(default_state)

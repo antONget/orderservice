@@ -466,13 +466,13 @@ def keyboard_ready_player(id_order) -> None:
     return keyboard
 
 
-def keyboard_send_report() -> None:
+def keyboard_send_report(id_report) -> None:
     """
     Клавиатура для вовращения после редактирования
     :return:
     """
     button_1 = InlineKeyboardButton(text='ОТЧЕТ',
-                                    callback_data='report')
+                                    callback_data=f'report_{id_report}')
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[button_1]],
     )

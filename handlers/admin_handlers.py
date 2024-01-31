@@ -390,9 +390,9 @@ async def process_cancel_odrers(callback: CallbackQuery, state: FSMContext) -> N
 async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     logging.info(f'process_send_orders_all: {callback.message.chat.id}')
     row_services = get_row_services(user_dict[callback.message.chat.id]["select_title_service"])
-    print(row_services)
+    print(row_services)  # [(id, title_services, cost_services,count_people)]
     add_orders(title_services=user_dict[callback.message.chat.id]["select_title_service"],
-               cost_services=row_services[0][1],
+               cost_services=row_services[0][2],
                comment=user_dict[callback.message.chat.id]["select_comment_service"],
                count_people=row_services[0][3])
     id_orders = get_id_last_orders()
@@ -408,6 +408,15 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
                                      reply_markup=keyboard_ready_player(id_order=id_orders[0]))
         iduser_idmessage = f'{row[0]}_{msg.message_id}'
         list_mailing.append(iduser_idmessage)
+    msg = await bot.send_message(chat_id=config.tg_bot.admin_ids,
+                           text=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
+                                f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
+                                f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
+                                f'Готовы выполнить?',
+                           reply_markup=keyboard_ready_player(id_order=id_orders[0]))
+    iduser_idmessage = f'{config.tg_bot.admin_ids}_{msg.message_id}'
+    list_mailing.append(iduser_idmessage)
+    await callback.message.answer(text=f'Заказ № {id_orders[0]} успешно отправлен')
     list_mailing_str = ','.join(list_mailing)
     update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=id_orders[0])
     await state.set_state(default_state)

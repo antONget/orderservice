@@ -319,12 +319,12 @@ def add_orders(title_services, cost_services, comment, count_people) -> None:
 
 
 # ЗАКАЗЫ - получение заказа по ее id
-def get_row_orders_id(id_services) -> list:
+def get_row_orders_id(id_order) -> list:
     """
     Функция формирует список пользователей прошедших верефикацию
     :return:
     """
-    sql.execute('SELECT * FROM orders WHERE id = ?', (id_services,))
+    sql.execute('SELECT * FROM orders WHERE id = ?', (id_order,))
     row_services = [row for row in sql.fetchall()]
     return row_services
 
