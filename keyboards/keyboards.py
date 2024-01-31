@@ -461,7 +461,7 @@ def keyboard_ready_player(id_order) -> None:
     button_2 = InlineKeyboardButton(text='Нет',
                                     callback_data=f'ready_no_{id_order}')
     keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[button_1, button_2]],
+        inline_keyboard=[[button_1]],
     )
     return keyboard
 

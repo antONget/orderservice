@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery
 import json
 import asyncio
 from module.data_base import check_command_for_admins, table_users, check_command_for_user, get_row_orders_id, \
-    update_list_players, get_channel
+    update_list_players, get_channel, get_list_admin
 import logging
 from config_data.config import Config, load_config
 from module.data_base import check_token
@@ -31,7 +31,7 @@ class User(StatesGroup):
 async def process_start_command_user(message: Message, state: FSMContext) -> None:
     table_users()
     logging.info(f'process_start_command_user: {message.chat.id}')
-    if check_command_for_user:
+    if not check_command_for_user(message):
         await message.answer(text='Для авторизации в боте пришлите токен который вам отправил администратор')
         await state.set_state(User.get_token)
     else:
@@ -40,10 +40,16 @@ async def process_start_command_user(message: Message, state: FSMContext) -> Non
 
 # проверяем TOKEN
 @router.message(F.text, StateFilter(User.get_token))
-async def get_token_user(message: Message, state: FSMContext) -> None:
+async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
     logging.info(f'get_token_user: {message.chat.id}')
     if check_token(message):
         await message.answer(text='Вы добавлены')
+        list_admin = get_list_admin()
+        for row in list_admin:
+            await bot.send_message(chat_id=row[0],
+                                   text=f'Пользователь @{message.from_user.username} авторизован')
+        await bot.send_message(chat_id=config.tg_bot.admin_ids,
+                               text=f'Пользователь @{message.from_user.username} авторизован')
         await state.set_state(User.auth_token)
     else:
         await message.answer(text='TOKEN не прошел верификацию. Попробуйте с другим токеном')

@@ -39,7 +39,7 @@ async def process_start_command(message: Message) -> None:
     table_users()
     logging.info(f'process_start_command: {message.chat.id}')
     if str(message.chat.id) != str(config.tg_bot.admin_ids):
-        await message.answer(text=MESSAGE_TEXT['start'],
+        await message.answer(text=MESSAGE_TEXT['admin'],
                              reply_markup=keyboards_admin())
     else:
         await message.answer(text=MESSAGE_TEXT['superadmin'],

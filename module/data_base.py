@@ -143,7 +143,7 @@ def check_command_for_admins(message: Message) -> bool:
     return message.chat.id in telegram_ids or str(message.chat.id) == str(config.tg_bot.admin_ids)
 
 
-# ПОЛЬЗОВАТЕЛЬ - проверка на админа
+# ПОЛЬЗОВАТЕЛЬ - проверка на авторизоанного пользователя
 def check_command_for_user(message: Message) -> bool:
     """
     Функция проводит верификацию пользователя
@@ -155,6 +155,7 @@ def check_command_for_user(message: Message) -> bool:
     # Извлечение результатов запроса и сохранение их в список
     telegram_ids = [row[0] for row in sql.fetchall()]
     # Закрытие соединения
+    print(telegram_ids, message.chat.id in telegram_ids)
     return message.chat.id in telegram_ids
 
 
@@ -235,6 +236,18 @@ def get_list_users() -> list:
     sql.execute('SELECT telegram_id, username FROM users WHERE NOT username = ?', ('username',))
     list_username = [row for row in sql.fetchall()]
     return list_username
+
+
+# ПОЛЬЗОВАТЕЛЬ - список админов
+def get_list_admin() -> list:
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('SELECT telegram_id FROM users WHERE is_admin = ?', (1,))
+    list_admin = [row for row in sql.fetchall()]
+    return list_admin
+
 
 # ПОЛЬЗОВАТЕЛЬ - имя пользователя по его id
 def get_user(telegram_id):
