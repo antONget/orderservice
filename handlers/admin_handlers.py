@@ -21,7 +21,7 @@ router = Router()
 config: Config = load_config()
 user_dict = {}
 table_users()
-add_super_admin(config.tg_bot.admin_ids, 'superadmin')
+# add_super_admin(config.tg_bot.admin_ids, 'superadmin')
 
 
 class Stage(StatesGroup):
