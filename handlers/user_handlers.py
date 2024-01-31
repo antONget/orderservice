@@ -51,8 +51,8 @@ async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
         for row in list_admin:
             await bot.send_message(chat_id=row[0],
                                    text=f'Пользователь @{message.from_user.username} авторизован')
-        await bot.send_message(chat_id=config.tg_bot.admin_ids,
-                               text=f'Пользователь @{message.from_user.username} авторизован')
+        # await bot.send_message(chat_id=config.tg_bot.admin_ids,
+        #                        text=f'Пользователь @{message.from_user.username} авторизован')
         await state.set_state(User.auth_token)
     else:
         await message.answer(text='TOKEN не прошел верификацию. Попробуйте с другим токеном')
@@ -109,8 +109,9 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
                             await bot.delete_message(chat_id=chat_id,
                                                      message_id=message_id)
                     list_admin = get_list_admin()
+                    print(list_admin)
                     for admin in list_admin:
-                        await bot.send_message(chat_id=int(admin[0][2]),
+                        await bot.send_message(chat_id=admin[0],
                                                text=f'Заказ № {id_order} в работе!')
                     await asyncio.sleep(5)
                     list_players = info_orders[0][5].split(',')
@@ -126,7 +127,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
 @router.callback_query(F.data.startswith('report'))
 async def process_send_report(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'process_send_report: {callback.message.chat.id}')
-    await callback.message.answer(text='Какая выкладка у клиента?')
+    await callback.message.edit_text(text='Какая выкладка у клиента?')
     await state.update_data(id_order=callback.data.split('_')[1])
     await state.set_state(User.report1)
 
@@ -148,18 +149,26 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
     print(info_orders)
     title_order = info_orders[0][1]
     cost_order = info_orders[0][2]
-
+    # список рассылки
+    list_mailer = info_orders[0][6].split(',')
     total = info_orders[0][2] * info_orders[0][4]
     # получаем username иполнителей
     list_players = []
+    # проходим по всем исполнителям заказа
     for row in info_orders[0][5].split(','):
         list_players.append(f'@{row.split(".")[0]} ({cost_order})')
         await bot.send_message(chat_id=int(row.split(".")[1]),
                                text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b> отправлен!')
+        # освобождаем исполнителя
         set_busy_id(0, int(row.split(".")[1]))
-    # for player in info_orders[0][5].split(','):
-    #     await bot.delete_message(chat_id=int(row.split(".")[1]),
-    #                              message_id=int(row.split(".")[2]))
+        # удаляем заказ у исполнителей list_mailer [id, message_id]
+        for iduser_idmessage in list_mailer:
+            if int(iduser_idmessage.split('_')[0]) == int(row.split(".")[1]):
+                await bot.delete_message(chat_id=int(row.split(".")[1]),
+                                         message_id=int(iduser_idmessage.split('_')[1]))
+        # for player in info_orders[0][5].split(','):
+        #     await bot.delete_message(chat_id=int(row.split(".")[1]),
+        #                              message_id=int(row.split(".")[2]))
     str_player = '\n'.join(list_players)
     try:
         chat_id = get_channel()[0][0]

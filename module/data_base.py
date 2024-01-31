@@ -139,7 +139,7 @@ def check_command_for_admins(message: Message) -> bool:
     sql.execute('SELECT telegram_id FROM users WHERE is_admin = ?', (1,))
     # Извлечение результатов запроса и сохранение их в список
     telegram_ids = [row[0] for row in sql.fetchall()]
-    print(telegram_ids)
+    # print('check_command_for_admins', telegram_ids)
     # Закрытие соединения
     return message.chat.id in telegram_ids or str(message.chat.id) == str(config.tg_bot.admin_ids)
 
@@ -156,7 +156,7 @@ def check_command_for_user(message: Message) -> bool:
     # Извлечение результатов запроса и сохранение их в список
     telegram_ids = [row[0] for row in sql.fetchall()]
     # Закрытие соединения
-    print(telegram_ids, message.chat.id in telegram_ids)
+    print('check_command_for_user', telegram_ids, message.chat.id in telegram_ids)
     return message.chat.id in telegram_ids
 
 
@@ -171,7 +171,7 @@ def check_token(message: Message) -> bool:
     sql.execute('SELECT token_auth, telegram_id  FROM users')
     list_token = [row for row in sql.fetchall()]
     # Извлечение результатов запроса и сохранение их в список
-    print(list_token)
+    print('check_token', list_token)
     for row in list_token:
         token = row[0]
         telegram_id = row[1]
@@ -191,6 +191,13 @@ def add_token(token_new) -> None:
                 f'VALUES ("{token_new}", "telegram_id", "username", 0, 0)')
     db.commit()
 
+
+# ПОЛЬЗОВАТЕЛЬ - добавления сгенерированного токена
+def add_super_admin(id_admin, user) -> None:
+    logging.info(f'add_super_admin')
+    sql.execute(f'INSERT INTO users (token_auth, telegram_id, username, is_admin, is_busy) '
+                f'VALUES ("SUPERADMIN", {id_admin}, "{user}", 1, 0)')
+    db.commit()
 
 # КАНАЛ - правка канала
 def add_channel(channel) -> None:
@@ -385,6 +392,4 @@ def update_list_sendlers(list_mailing_str, id_orders):
 if __name__ == '__main__':
     db = sqlite3.connect('/Users/antonponomarev/PycharmProjects/boiko/database.db', check_same_thread=False)
     sql = db.cursor()
-    sql.execute('DROP TABLE IF EXISTS orders')
-    # table_users()
-    # sql.execute('SELECT telegram_id FROM users WHERE is_admin = 1')
+    set_busy_id(0, 843554518) #5443784834

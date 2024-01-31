@@ -14,13 +14,15 @@ from config_data.config import Config, load_config
 from module.data_base import check_command_for_admins, table_users, add_token, table_channel, add_channel,\
     get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins,\
     table_services, add_services, get_list_services, delete_services, update_service, get_cost_service, table_orders,\
-    add_orders, get_row_services, get_id_last_orders, update_list_sendlers
+    add_orders, get_row_services, get_id_last_orders, update_list_sendlers, add_super_admin
 
 router = Router()
 # Загружаем конфиг в переменную config
 config: Config = load_config()
 user_dict = {}
 table_users()
+# add_super_admin(config.tg_bot.admin_ids, 'superadmin')
+
 
 class Stage(StatesGroup):
     channel = State()
@@ -393,7 +395,7 @@ async def process_cancel_odrers(callback: CallbackQuery, state: FSMContext) -> N
 async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     logging.info(f'process_send_orders_all: {callback.message.chat.id}')
     row_services = get_row_services(user_dict[callback.message.chat.id]["select_title_service"])
-    print(row_services)  # [(id, title_services, cost_services,count_people)]
+    print('process_send_orders_all', row_services)  # [(id, title_services, cost_services,count_people)]
     add_orders(title_services=user_dict[callback.message.chat.id]["select_title_service"],
                cost_services=row_services[0][2],
                comment=user_dict[callback.message.chat.id]["select_comment_service"],
@@ -411,14 +413,14 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
                                      reply_markup=keyboard_ready_player(id_order=id_orders[0]))
         iduser_idmessage = f'{row[0]}_{msg.message_id}'
         list_mailing.append(iduser_idmessage)
-    msg = await bot.send_message(chat_id=config.tg_bot.admin_ids,
-                           text=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
-                                f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
-                                f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
-                                f'Готовы выполнить?',
-                           reply_markup=keyboard_ready_player(id_order=id_orders[0]))
-    iduser_idmessage = f'{config.tg_bot.admin_ids}_{msg.message_id}'
-    list_mailing.append(iduser_idmessage)
+    # msg = await bot.send_message(chat_id=config.tg_bot.admin_ids,
+    #                        text=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
+    #                             f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
+    #                             f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
+    #                             f'Готовы выполнить?',
+    #                        reply_markup=keyboard_ready_player(id_order=id_orders[0]))
+    # iduser_idmessage = f'{config.tg_bot.admin_ids}_{msg.message_id}'
+    # list_mailing.append(iduser_idmessage)
     await callback.message.answer(text=f'Заказ № {id_orders[0]} успешно отправлен')
     list_mailing_str = ','.join(list_mailing)
     update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=id_orders[0])
@@ -509,7 +511,7 @@ async def process_deleteuser(callback: CallbackQuery) -> None:
 async def process_description(callback: CallbackQuery, state: FSMContext) -> None:
     user_dict[callback.message.chat.id] = await state.get_data()
     user_info = get_user(user_dict[callback.message.chat.id]["del_telegram_id"])
-    print(user_info, user_dict[callback.message.chat.id]["del_telegram_id"])
+    print('process_description', user_info, user_dict[callback.message.chat.id]["del_telegram_id"])
     delete_user(user_dict[callback.message.chat.id]["del_telegram_id"])
     await callback.message.answer(text=f'Пользователь успешно удален')
     await asyncio.sleep(3)
@@ -589,10 +591,10 @@ async def process_deleteuser(callback: CallbackQuery) -> None:
 
 # удаление после подтверждения
 @router.callback_query(F.data == 'add_admin_list')
-async def process_description(callback: CallbackQuery, state: FSMContext) -> None:
+async def process_add_admin_list(callback: CallbackQuery, state: FSMContext) -> None:
     user_dict[callback.message.chat.id] = await state.get_data()
     user_info = get_user(user_dict[callback.message.chat.id]["add_admin_telegram_id"])
-    print(user_info, user_dict[callback.message.chat.id]["add_admin_telegram_id"])
+    print('add_admin_list', user_info, user_dict[callback.message.chat.id]["add_admin_telegram_id"])
     set_admins(int(user_dict[callback.message.chat.id]["add_admin_telegram_id"]))
     await callback.message.answer(text=f'Пользователь успешно назначен администратором')
     await asyncio.sleep(3)
@@ -662,7 +664,7 @@ async def process_deleteuser(callback: CallbackQuery) -> None:
 async def process_description(callback: CallbackQuery, state: FSMContext) -> None:
     user_dict[callback.message.chat.id] = await state.get_data()
     user_info = get_user(user_dict[callback.message.chat.id]["del_admin_telegram_id"])
-    print(user_info, user_dict[callback.message.chat.id]["del_admin_telegram_id"])
+    print('process_description', user_info, user_dict[callback.message.chat.id]["del_admin_telegram_id"])
     set_notadmins(int(user_dict[callback.message.chat.id]["del_admin_telegram_id"]))
     await callback.message.answer(text=f'Пользователь успешно разжалован')
     await asyncio.sleep(3)
