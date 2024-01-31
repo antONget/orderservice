@@ -10,7 +10,7 @@ from aiogram.types import CallbackQuery
 import json
 import asyncio
 from module.data_base import check_command_for_admins, table_users, check_command_for_user, get_row_orders_id, \
-    update_list_players, get_channel, get_list_admin, get_busy_id, set_busy_id
+    update_list_players, get_channel, get_list_admin, get_busy_id, set_busy_id, update_report
 import logging
 from config_data.config import Config, load_config
 from module.data_base import check_token
@@ -169,6 +169,8 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
         # for player in info_orders[0][5].split(','):
         #     await bot.delete_message(chat_id=int(row.split(".")[1]),
         #                              message_id=int(row.split(".")[2]))
+    update_report(report=f'Выкладка: {user_dict1[message.chat.id]["report1"]} Выдано: {user_dict1[message.chat.id]["report2"]}',
+                  id_orders=int(user_dict1[message.chat.id]["id_order"]))
     str_player = '\n'.join(list_players)
     try:
         chat_id = get_channel()[0][0]

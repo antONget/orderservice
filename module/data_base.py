@@ -67,7 +67,8 @@ def table_orders() -> None:
         comment TEXT,
         count_people INTEGER,
         players TEXT,
-        sendler TEXT
+        sendler TEXT,
+        report TEXT
     )""")
     db.commit()
 
@@ -341,8 +342,8 @@ def set_notadmins(telegram_id):
 
 # ЗАКАЗ - создание нового заказа
 def add_orders(title_services, cost_services, comment, count_people) -> None:
-    sql.execute(f'INSERT INTO orders (title_services, cost_services, comment, count_people, players, sendler) '
-                f'VALUES ("{title_services}", "{cost_services}", "{comment}", "{count_people}", "players", "sendler")')
+    sql.execute(f'INSERT INTO orders (title_services, cost_services, comment, count_people, players, sendler, report) '
+                f'VALUES ("{title_services}", "{cost_services}", "{comment}", "{count_people}", "players", "sendler", "report")')
     db.commit()
 
 
@@ -388,6 +389,16 @@ def update_list_sendlers(list_mailing_str, id_orders):
     sql.execute('UPDATE orders SET sendler = ? WHERE id = ?', (list_mailing_str, id_orders))
     db.commit()
 
+
+
+# ЗАКАЗЫ - обновление отчета
+def update_report(report, id_orders):
+    """
+    Функция формирует список пользователей прошедших верефикацию
+    :return:
+    """
+    sql.execute('UPDATE orders SET report = ? WHERE id = ?', (report, id_orders))
+    db.commit()
 
 if __name__ == '__main__':
     db = sqlite3.connect('/Users/antonponomarev/PycharmProjects/boiko/database.db', check_same_thread=False)
