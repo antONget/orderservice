@@ -44,6 +44,7 @@ async def process_start_command(message: Message) -> None:
         await message.answer(text=MESSAGE_TEXT['admin'],
                              reply_markup=keyboards_admin())
     else:
+        add_super_admin(config.tg_bot.admin_ids, f'superadmin_@{message.from_user.username}')
         await message.answer(text=MESSAGE_TEXT['superadmin'],
                              reply_markup=keyboards_superadmin())
 
