@@ -174,21 +174,22 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
                   id_orders=int(user_dict1[message.chat.id]["id_order"]))
     str_player = '\n'.join(list_players)
     # try:
-    chat_id = int(get_channel()[0][0])
-    print(chat_id)
+    list_chat_id = get_channel()
+    print(list_chat_id)
     # chat_id=config.tg_bot.channel_id
     # print(chat_id)
-    await bot.send_message(chat_id=chat_id,
-                           text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b>\n\n'
-                                f'<b>Выполнили: </b>\n'
-                                f'{str_player}\n\n'
-                                f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
-                                f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n',
-                           parse_mode='html')
+    for chat_id in list_chat_id:
+        await bot.send_message(chat_id=int(chat_id[0]),
+                               text=f'<b>ОТЧЁТ № {user_dict1[message.chat.id]["id_order"]}</b>\n\n'
+                                    f'<b>Выполнили:</b>\n'
+                                    f'{str_player}\n\n'
+                                    f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
+                                    f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n',
+                               parse_mode='html')
     # except:
-    await message.answer(text=f'<b>ОТЧЁТ по услуге: {title_order}</b>\n\n'
-                              f'<b>Выполнили: </b>\n'
-                              f'{str_player}\n\n'
-                              f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
-                              f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n')
+    # await message.answer(text=f'<b>ОТЧЁТ по услуге: {title_order}</b>\n\n'
+    #                           f'<b>Выполнили: </b>\n'
+    #                           f'{str_player}\n\n'
+    #                           f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
+    #                           f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n')
     await state.set_state(default_state)

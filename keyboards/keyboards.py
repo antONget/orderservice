@@ -8,7 +8,7 @@ def keyboards_superadmin():
     button_1 = KeyboardButton(text='Администраторы')
     button_2 = KeyboardButton(text='Услуга')
     button_3 = KeyboardButton(text='Пользователь')
-    button_4 = KeyboardButton(text='Канал')
+    button_4 = KeyboardButton(text='Прикрепить')
     keyboard = ReplyKeyboardMarkup(
         keyboard=[[button_1], [button_2, button_3, button_4]],
         resize_keyboard=True
@@ -20,7 +20,7 @@ def keyboards_superadmin():
 def keyboards_admin():
     button_2 = KeyboardButton(text='Услуга')
     button_3 = KeyboardButton(text='Пользователь')
-    button_4 = KeyboardButton(text='Канал')
+    button_4 = KeyboardButton(text='Прикрепить')
     keyboard = ReplyKeyboardMarkup(
         keyboard=[[button_2, button_3, button_4]],
         resize_keyboard=True
@@ -440,7 +440,7 @@ def keyboard_finish_orders() -> None:
     Клавиатура для вовращения после редактирования
     :return:
     """
-    button_1 = InlineKeyboardButton(text='Разослать',
+    button_1 = InlineKeyboardButton(text='Отправить',
                                     callback_data='send_orders')
     button_2 = InlineKeyboardButton(text='Отмена',
                                     callback_data='cancel_orders')
@@ -475,5 +475,20 @@ def keyboard_send_report(id_report) -> None:
                                     callback_data=f'report_{id_report}')
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[button_1]],
+    )
+    return keyboard
+
+
+def keyboard_append_channel_and_group() -> None:
+    """
+    Клавиатура для редактирования списка пользователей
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Канал',
+                                    callback_data='add_channel')
+    button_2 = InlineKeyboardButton(text='Беседа',
+                                    callback_data='add_group')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1, button_2]],
     )
     return keyboard

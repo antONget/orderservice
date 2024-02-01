@@ -36,7 +36,7 @@ def table_channel() -> None:
     sql.execute("""CREATE TABLE IF NOT EXISTS channel(
         id INTEGER PRIMARY KEY,
         channel_id INTEGER,
-        is_send INTEGER
+        type TEXT
     )""")
     db.commit()
 
@@ -204,37 +204,48 @@ def add_super_admin(id_admin, user) -> None:
                     f'VALUES ("SUPERADMIN", {id_admin}, "{user}", 1, 0)')
         db.commit()
 
-# КАНАЛ - правка канала
+
+# ПРИВЯЗАТЬ - правка канала
 def add_channel(channel) -> None:
     """
     Функция производит добавления пользователя в таблицу users
     :param token_new:
     :return: None
     """
-    sql.execute('SELECT channel_id FROM channel')
+    sql.execute('SELECT channel_id FROM channel WHERE type = ?', ('channel',))
     list_channel = [row[0] for row in sql.fetchall()]
-
-
     if list_channel:
-        print('true', channel)
-        # for ch in list_channel:
-        #     sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
-        #                 (0, ch))
-        sql.execute(f"UPDATE channel SET channel_id = ?",
-                    (channel,))
+        print('1.channel', channel)
+        sql.execute(f"UPDATE channel SET channel_id = ? WHERE type = ?",
+                    (channel, 'channel',))
     else:
-        print('false', channel)
-        sql.execute(f'INSERT INTO channel (channel_id, is_send)'
-                    f'VALUES ("{channel}", 1)')
-        # for ch in list_channel:
-        #     sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
-        #                 (0, ch))
-
+        print('0.channel', channel)
+        sql.execute(f'INSERT INTO channel (channel_id, type)'
+                    f'VALUES ("{channel}", "channel")')
     db.commit()
 
 
-def get_channel() -> int:
+# ПРИВЯЗАТЬ - правка беседы
+def add_group(group) -> None:
+    """
+    Функция производит добавления пользователя в таблицу users
+    :param token_new:
+    :return: None
+    """
+    sql.execute('SELECT channel_id FROM channel WHERE type = ?', ('group',))
+    list_channel = [row[0] for row in sql.fetchall()]
+    if list_channel:
+        print('1.group:', group)
+        sql.execute(f"UPDATE channel SET channel_id = ? WHERE type = ?",
+                    (group, 'group',))
+    else:
+        print('0.group', group)
+        sql.execute(f'INSERT INTO channel (channel_id, type)'
+                    f'VALUES ("{group}", "group")')
+    db.commit()
 
+
+def get_channel() -> list:
     sql.execute('SELECT channel_id FROM channel')
     channel_id = [row for row in sql.fetchall()]
     return channel_id
@@ -363,7 +374,7 @@ def get_row_orders_id(id_order) -> list:
 
 
 # ЗАКАЗЫ - получение id последнего заказа
-def get_id_last_orders() -> list:
+def get_id_last_orders() -> int:
     """
     Функция формирует список пользователей прошедших верефикацию
     :return:
