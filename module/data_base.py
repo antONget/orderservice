@@ -215,15 +215,15 @@ def add_channel(channel) -> None:
     list_channel = [row[0] for row in sql.fetchall()]
 
 
-    if int(channel) in list_channel:
-        print('такая группа есть в списке')
+    if list_channel:
+        print('true', channel)
         # for ch in list_channel:
         #     sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
         #                 (0, ch))
-        sql.execute(f"UPDATE channel SET is_send = ? WHERE channel_id = ?",
-                    (1, channel))
+        sql.execute(f"UPDATE channel SET channel_id = ?",
+                    (channel,))
     else:
-        print('группы нет в списке')
+        print('false', channel)
         sql.execute(f'INSERT INTO channel (channel_id, is_send)'
                     f'VALUES ("{channel}", 1)')
         # for ch in list_channel:
