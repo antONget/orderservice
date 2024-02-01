@@ -198,7 +198,8 @@ def add_super_admin(id_admin, user) -> None:
     logging.info(f'add_super_admin')
     sql.execute('SELECT telegram_id FROM users')
     super_admin = [row[0] for row in sql.fetchall()]
-    if id_admin not in super_admin:
+
+    if int(id_admin) not in super_admin:
         sql.execute(f'INSERT INTO users (token_auth, telegram_id, username, is_admin, is_busy) '
                     f'VALUES ("SUPERADMIN", {id_admin}, "{user}", 1, 0)')
         db.commit()

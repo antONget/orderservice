@@ -110,7 +110,7 @@ async def process_append_services(callback: CallbackQuery, state: FSMContext) ->
 async def process_get_title_services(message: Message, state: FSMContext) -> None:
     logging.info(f'process_append_services: {message.chat.id}')
     await state.update_data(title_services=message.text)
-    await message.answer(text=f'Укажите стоимость выполнения услуги <b>{message.text}</b> для одного исполнителя')
+    await message.answer(text=f'Укажите стоимость выполнения услуги <b>{message.text}</b>')
     await state.set_state(Stage.cost_services)
 
 

@@ -65,7 +65,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
     # проверяем звнятость пользователя
     # print(get_busy_id(callback.message.chat.id))
     if get_busy_id(callback.message.chat.id):
-        await callback.message.answer(text='Вы не можете брать другие задание, пока не будет получен отчет!')
+        await callback.message.answer(text='Вы не можете брать другие заказы, пока не будет получен отчет!')
     else:
         set_busy_id(1, callback.message.chat.id)
         ready = callback.data.split('_')[1]
@@ -90,7 +90,8 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
                 new_players = ','.join(players)
                 # обновляем заказ
                 update_list_players(new_players, int(id_order))
-                await callback.message.answer(text=f'Отлично вы в команде!')
+                await callback.message.answer(text=f'Отлично вы взяли заказ!\n'
+                                                   f'Вы не можете брать другие заказы, пока не будет получен отчет!')
                 # если пользователь был последним в списке
                 if not count_players - len(players):
                     # получаем информацию о заказе
@@ -172,21 +173,22 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
     update_report(report=f'Выкладка: {user_dict1[message.chat.id]["report1"]} Выдано: {user_dict1[message.chat.id]["report2"]}',
                   id_orders=int(user_dict1[message.chat.id]["id_order"]))
     str_player = '\n'.join(list_players)
-    try:
-        chat_id = get_channel()[0][0]
-        print(chat_id)
-        await bot.send_message(chat_id=chat_id,
-                               text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b>\n\n'
-                                    f'<b>Выполнили: </b>\n'
-                                    f'{str_player}\n\n'
-                                    f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
-                                    f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n'
-                                    f'<b>Итого:</b> {total}')
-    except:
-        await message.answer(text=f'<b>ОТЧЁТ по услуге: {title_order}</b>\n\n'
-                                  f'<b>Выполнили: </b>\n'
-                                  f'{str_player}\n\n'
-                                  f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
-                                  f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n'
-                                  f'<b>Итого:</b> {total}')
+    # try:
+    chat_id = int(get_channel()[0][0])
+    print(chat_id)
+    # chat_id=config.tg_bot.channel_id
+    # print(chat_id)
+    await bot.send_message(chat_id=chat_id,
+                           text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b>\n\n'
+                                f'<b>Выполнили: </b>\n'
+                                f'{str_player}\n\n'
+                                f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
+                                f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n',
+                           parse_mode='html')
+    # except:
+    await message.answer(text=f'<b>ОТЧЁТ по услуге: {title_order}</b>\n\n'
+                              f'<b>Выполнили: </b>\n'
+                              f'{str_player}\n\n'
+                              f'<b>Выкладка:</b> {user_dict1[message.chat.id]["report1"]}\n'
+                              f'<b>Выдано:</b> {user_dict1[message.chat.id]["report2"]}\n')
     await state.set_state(default_state)
