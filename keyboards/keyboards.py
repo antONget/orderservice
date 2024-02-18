@@ -9,8 +9,10 @@ def keyboards_superadmin():
     button_2 = KeyboardButton(text='Услуга')
     button_3 = KeyboardButton(text='Пользователь')
     button_4 = KeyboardButton(text='Прикрепить')
+    button_5 = KeyboardButton(text='Статистика')
+    button_6 = KeyboardButton(text='Сбросить статистику')
     keyboard = ReplyKeyboardMarkup(
-        keyboard=[[button_1], [button_2, button_3, button_4]],
+        keyboard=[[button_1], [button_2, button_3, button_4], [button_5, button_6]],
         resize_keyboard=True
     )
     return keyboard
@@ -21,8 +23,19 @@ def keyboards_admin():
     button_2 = KeyboardButton(text='Услуга')
     button_3 = KeyboardButton(text='Пользователь')
     button_4 = KeyboardButton(text='Прикрепить')
+    button_5 = KeyboardButton(text='Статистика')
     keyboard = ReplyKeyboardMarkup(
-        keyboard=[[button_2, button_3, button_4]],
+        keyboard=[[button_2, button_3, button_4], [button_5]],
+        resize_keyboard=True
+    )
+    return keyboard
+
+
+# ГЛАВНОЕ МЕНЮ ПОЛЬЗОВАТЕЛЬ
+def keyboards_main_user():
+    button_2 = KeyboardButton(text='Баланс')
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[button_2]],
         resize_keyboard=True
     )
     return keyboard
@@ -264,6 +277,20 @@ def keyboard_edit_services() -> None:
     return keyboard
 
 
+
+# УСЛУГА -> Добавить - изображение
+def keyboard_add_picture() -> None:
+    """
+    Клавиатура для редактирования списка пользователей
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Пропустить',
+                                    callback_data='pass_picture')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1]]
+    )
+    return keyboard
+
 # УСЛУГА -> Редактировать -> Добавить
 def keyboard_confirmation_append_services() -> None:
     """
@@ -452,29 +479,26 @@ def keyboard_finish_orders() -> None:
 
 # клавиатура подтверждения готовности участия в заказе с id = id_services
 def keyboard_ready_player(id_order) -> None:
-    """
-    Клавиатура для вовращения после редактирования
-    :return:
-    """
+
     button_1 = InlineKeyboardButton(text='Да',
                                     callback_data=f'ready_yes_{id_order}')
-    button_2 = InlineKeyboardButton(text='Нет',
-                                    callback_data=f'ready_no_{id_order}')
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[button_1]],
     )
     return keyboard
 
 
-def keyboard_send_report(id_report) -> None:
+def keyboard_send_report(id_order) -> None:
     """
     Клавиатура для вовращения после редактирования
     :return:
     """
     button_1 = InlineKeyboardButton(text='ОТЧЕТ',
-                                    callback_data=f'report_{id_report}')
+                                    callback_data=f'report_{id_order}')
+    button_2 = InlineKeyboardButton(text='Заменить',
+                                    callback_data=f'change_player_{id_order}')
     keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[button_1]],
+        inline_keyboard=[[button_1], [button_2]],
     )
     return keyboard
 
@@ -488,6 +512,34 @@ def keyboard_append_channel_and_group() -> None:
                                     callback_data='add_channel')
     button_2 = InlineKeyboardButton(text='Беседа',
                                     callback_data='add_group')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1, button_2]],
+    )
+    return keyboard
+
+
+def keyboard_change_player(id_order) -> None:
+    """
+    Клавиатура для редактирования списка пользователей
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Заменить',
+                                    callback_data=f'change_player_{id_order}')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1]],
+    )
+    return keyboard
+
+
+def keyboard_confirm_report() -> None:
+    """
+    Клавиатура для редактирования списка пользователей
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Да',
+                                    callback_data='yesreport')
+    button_2 = InlineKeyboardButton(text='Нет',
+                                    callback_data='noreport')
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[button_1, button_2]],
     )

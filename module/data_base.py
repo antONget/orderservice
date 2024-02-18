@@ -13,10 +13,7 @@ sql = db.cursor()
 
 # СОЗДАНИЕ ТАБЛИЦ
 def table_users() -> None:
-    """
-    Создание таблицы администраторов
-    :return: None
-    """
+    print("table_users")
     sql.execute("""CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY,
         token_auth TEXT,
@@ -29,10 +26,7 @@ def table_users() -> None:
 
 
 def table_channel() -> None:
-    """
-    Создание таблицы каналов
-    :return: None
-    """
+    print("table_channel")
     sql.execute("""CREATE TABLE IF NOT EXISTS channel(
         id INTEGER PRIMARY KEY,
         channel_id INTEGER,
@@ -42,24 +36,19 @@ def table_channel() -> None:
 
 
 def table_services() -> None:
-    """
-    Создание таблицы администраторов
-    :return: None
-    """
+    print("table_services")
     sql.execute("""CREATE TABLE IF NOT EXISTS services(
         id INTEGER PRIMARY KEY,
         title_services TEXT,
         cost_services INTEGER,
-        count_services INTEGER
+        count_services INTEGER,
+        picture_services TEXT
     )""")
     db.commit()
 
 
 def table_orders() -> None:
-    """
-    Создание таблицы администраторов
-    :return: None
-    """
+    print("table_orders")
     sql.execute("""CREATE TABLE IF NOT EXISTS orders(
         id INTEGER PRIMARY KEY,
         title_services TEXT,
@@ -68,24 +57,34 @@ def table_orders() -> None:
         count_people INTEGER,
         players TEXT,
         sendler TEXT,
+        change TEXT,
         report TEXT
     )""")
     db.commit()
 
 
+def table_statistic() -> None:
+    print("table_orders")
+    sql.execute("""CREATE TABLE IF NOT EXISTS statistic(
+        id INTEGER PRIMARY KEY,
+        cost_services INTEGER,
+        count_people INTEGER,
+        players TEXT
+    )""")
+    db.commit()
+
+
 # УСЛУГИ - добавление услуги
-def add_services(title_services, cost_services, count_services) -> None:
-    sql.execute(f'INSERT INTO services (title_services, cost_services, count_services) '
-                f'VALUES ("{title_services}", "{cost_services}", "{count_services}")')
+def add_services(title_services, cost_services, count_services, picture_services) -> None:
+    print("add_services")
+    sql.execute(f'INSERT INTO services (title_services, cost_services, count_services, picture_services) '
+                f'VALUES ("{title_services}", "{cost_services}", "{count_services}", "{picture_services}")')
     db.commit()
 
 
 # УСЛУГИ - получение списка названий услуг
 def get_list_services() -> list:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    print("get_list_services")
     sql.execute('SELECT title_services FROM services')
     list_username = [row for row in sql.fetchall()]
     return list_username
@@ -93,10 +92,7 @@ def get_list_services() -> list:
 
 # УСЛУГИ - получение услуги по ее названию
 def get_row_services(title_services) -> list:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    print("get_row_services")
     sql.execute('SELECT * FROM services WHERE title_services = ?', (title_services,))
     row_services = [row for row in sql.fetchall()]
     return row_services
@@ -104,17 +100,14 @@ def get_row_services(title_services) -> list:
 
 # УСЛУГИ - удалить услугу
 def delete_services(title_services):
-    """
-    Функция выдает информацию о запрашиваемом пользователе
-    :param telegram_id:
-    :return:
-    """
+    print("delete_services")
     sql.execute('DELETE FROM services WHERE title_services = ?', (title_services,))
     db.commit()
 
 
 # УСЛУГИ - обновление названия и стоимости услуги
 def update_service(title_services, title_services_new, cost):
+    print("update_service")
     sql.execute('UPDATE services SET title_services = ?, cost_services = ? WHERE title_services = ?',
                 (title_services_new, cost, title_services))
     db.commit()
@@ -122,20 +115,13 @@ def update_service(title_services, title_services_new, cost):
 
 # УСЛУГИ - получение стоимости услуги
 def get_cost_service(title_services) -> int:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    print("get_cost_service")
     return sql.execute('SELECT cost_services FROM services WHERE title_services = ?', (title_services,)).fetchone()[0]
 
 
 # ПОЛЬЗОВАТЕЛЬ - проверка на админа
 def check_command_for_admins(message: Message) -> bool:
-    """
-    Функция проводит верификацию пользователя
-    :param message:
-    :return:
-    """
+    print("check_command_for_admins")
     # Выполнение запроса для получения всех telegram_id из таблицы admins
     sql.execute('SELECT telegram_id FROM users WHERE is_admin = ?', (1,))
     # Извлечение результатов запроса и сохранение их в список
@@ -147,11 +133,7 @@ def check_command_for_admins(message: Message) -> bool:
 
 # ПОЛЬЗОВАТЕЛЬ - проверка на авторизоанного пользователя
 def check_command_for_user(message: Message) -> bool:
-    """
-    Функция проводит верификацию пользователя
-    :param message:
-    :return:
-    """
+    print("check_command_for_user")
     # Выполнение запроса для получения всех telegram_id из таблицы admins
     sql.execute('SELECT telegram_id FROM users')
     # Извлечение результатов запроса и сохранение их в список
@@ -163,11 +145,7 @@ def check_command_for_user(message: Message) -> bool:
 
 # ПОЛЬЗОВАТЕЛЬ - верификация токена
 def check_token(message: Message) -> bool:
-    """
-    Функция проводит верификацию пользователя по введенному TOKEN
-    :param message:
-    :return:
-    """
+    print("check_token")
     # Выполнение запроса для получения token_auth
     sql.execute('SELECT token_auth, telegram_id  FROM users')
     list_token = [row for row in sql.fetchall()]
@@ -207,11 +185,7 @@ def add_super_admin(id_admin, user) -> None:
 
 # ПРИВЯЗАТЬ - правка канала
 def add_channel(channel) -> None:
-    """
-    Функция производит добавления пользователя в таблицу users
-    :param token_new:
-    :return: None
-    """
+    logging.info(f'add_channel')
     sql.execute('SELECT channel_id FROM channel WHERE type = ?', ('channel',))
     list_channel = [row[0] for row in sql.fetchall()]
     if list_channel:
@@ -227,11 +201,7 @@ def add_channel(channel) -> None:
 
 # ПРИВЯЗАТЬ - правка беседы
 def add_group(group) -> None:
-    """
-    Функция производит добавления пользователя в таблицу users
-    :param token_new:
-    :return: None
-    """
+    logging.info(f'add_group')
     sql.execute('SELECT channel_id FROM channel WHERE type = ?', ('group',))
     list_channel = [row[0] for row in sql.fetchall()]
     if list_channel:
@@ -246,6 +216,7 @@ def add_group(group) -> None:
 
 
 def get_channel() -> list:
+    logging.info(f'get_channel')
     sql.execute('SELECT channel_id FROM channel')
     channel_id = [row for row in sql.fetchall()]
     return channel_id
@@ -253,21 +224,19 @@ def get_channel() -> list:
 
 # ПОЛЬЗОВАТЕЛЬ - список пользователей верифицированных в боте
 def get_list_users() -> list:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'get_list_users')
     sql.execute('SELECT telegram_id, username FROM users WHERE NOT username = ?', ('username',))
     list_username = [row for row in sql.fetchall()]
     return list_username
-
+def get_list_users_notadmin() -> list:
+    logging.info(f'get_list_users_notadmin')
+    sql.execute('SELECT telegram_id, username FROM users WHERE NOT username = ? AND is_admin = ?', ('username', 0))
+    list_username = [row for row in sql.fetchall()]
+    return list_username
 
 # ПОЛЬЗОВАТЕЛЬ - список админов
 def get_list_admin() -> list:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'get_list_admin')
     sql.execute('SELECT telegram_id FROM users WHERE is_admin = ?', (1,))
     list_admin = [row for row in sql.fetchall()]
     return list_admin
@@ -275,51 +244,33 @@ def get_list_admin() -> list:
 
 # ПОЛЬЗОВАТЕЛЬ - имя пользователя по его id
 def get_user(telegram_id):
-    """
-    Функция выдает информацию о запрашиваемом пользователе
-    :param telegram_id:
-    :return:
-    """
+    logging.info(f'get_user')
     return sql.execute('SELECT username FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()
 
 
 # ПОЛЬЗОВАТЕЛЬ - получить занятость
 def get_busy_id(telegram_id):
-    """
-    Функция выдает информацию о запрашиваемом пользователе
-    :param telegram_id:
-    :return:
-    """
+    logging.info(f'get_busy_id')
     return sql.execute('SELECT is_busy FROM users WHERE telegram_id = ?', (telegram_id,)).fetchone()[0]
 
 
 # ПОЛЬЗОВАТЕЛЬ - удалить пользователя
 def delete_user(telegram_id):
-    """
-    Функция выдает информацию о запрашиваемом пользователе
-    :param telegram_id:
-    :return:
-    """
+    logging.info(f'delete_user')
     sql.execute('DELETE FROM users WHERE telegram_id = ?', (telegram_id,))
     db.commit()
 
 
 # ПОЛЬЗОВАТЕЛЬ - установить занятость
 def set_busy_id(busy, telegram_id):
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'set_busy_id')
     sql.execute('UPDATE users SET is_busy = ? WHERE telegram_id = ?', (busy, telegram_id))
     db.commit()
 
 
 # АДМИНИСТРАТОРЫ - список администраторов
 def get_list_admins() -> list:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'get_list_admins')
     sql.execute('SELECT telegram_id, username FROM users WHERE is_admin = ? AND NOT username = ?', (1, 'username'))
     list_admins = [row for row in sql.fetchall()]
     return list_admins
@@ -327,47 +278,36 @@ def get_list_admins() -> list:
 
 # АДМИНИСТРАТОРЫ - список пользователей не являющихся администраторами
 def get_list_notadmins() -> list:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'get_list_notadmins')
     sql.execute('SELECT telegram_id, username FROM users WHERE is_admin = ? AND NOT username = ?', (0, 'username'))
     list_notadmins = [row for row in sql.fetchall()]
     return list_notadmins
 
 # АДМИНИСТРАТОРЫ - назначить пользователя администратором
 def set_admins(telegram_id):
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'set_admins')
     sql.execute('UPDATE users SET is_admin = ? WHERE telegram_id = ?', (1, telegram_id))
     db.commit()
 
 
 # АДМИНИСТРАТОРЫ - разжаловать пользователя из администраторов
 def set_notadmins(telegram_id):
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'set_notadmins')
     sql.execute('UPDATE users SET is_admin = ? WHERE telegram_id = ?', (0, telegram_id))
     db.commit()
 
 
 # ЗАКАЗ - создание нового заказа
 def add_orders(title_services, cost_services, comment, count_people) -> None:
-    sql.execute(f'INSERT INTO orders (title_services, cost_services, comment, count_people, players, sendler, report) '
-                f'VALUES ("{title_services}", "{cost_services}", "{comment}", "{count_people}", "players", "sendler", "report")')
+    logging.info(f'add_orders')
+    sql.execute(f'INSERT INTO orders (title_services, cost_services, comment, count_people, players, sendler, change, report) '
+                f'VALUES ("{title_services}", "{cost_services}", "{comment}", "{count_people}", "players", "sendler", "change", "report")')
     db.commit()
 
 
 # ЗАКАЗЫ - получение заказа по ее id
 def get_row_orders_id(id_order) -> list:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'get_row_orders_id')
     sql.execute('SELECT * FROM orders WHERE id = ?', (id_order,))
     row_services = [row for row in sql.fetchall()]
     return row_services
@@ -375,47 +315,67 @@ def get_row_orders_id(id_order) -> list:
 
 # ЗАКАЗЫ - получение id последнего заказа
 def get_id_last_orders() -> int:
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'get_id_last_orders')
     sql.execute('SELECT id FROM orders')
     row_id = [row for row in sql.fetchall()]
     print(row_id)
-    return row_id[-1]
+    if row_id:
+        return row_id[-1]
+    else:
+        return 0
 
 
 # ЗАКАЗЫ - обновление списка исполнителей
 def update_list_players(players, id_orders):
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'update_list_players')
     sql.execute('UPDATE orders SET players = ? WHERE id = ?', (players, id_orders))
     db.commit()
 
 
 # ЗАКАЗЫ - обновление списка рассылки
 def update_list_sendlers(list_mailing_str, id_orders):
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'update_list_sendlers')
     sql.execute('UPDATE orders SET sendler = ? WHERE id = ?', (list_mailing_str, id_orders))
     db.commit()
 
 
+# ЗАКАЗЫ - обновление списка отказавшихся
+def update_list_refuses(list_refuses, id_orders):
+    logging.info(f'update_list_refuses')
+    sql.execute('UPDATE orders SET change = ? WHERE id = ?', (list_refuses, id_orders))
+    db.commit()
+
 
 # ЗАКАЗЫ - обновление отчета
 def update_report(report, id_orders):
-    """
-    Функция формирует список пользователей прошедших верефикацию
-    :return:
-    """
+    logging.info(f'update_report')
     sql.execute('UPDATE orders SET report = ? WHERE id = ?', (report, id_orders))
     db.commit()
 
+
+# СТАТИСТИКА - добавление данных
+def add_statistic(cost_services, count_people, players) -> None:
+    print("add_services")
+    sql.execute(f'INSERT INTO statistic (cost_services, count_people, players) '
+                f'VALUES ("{cost_services}", "{count_people}", "{players}")')
+    db.commit()
+
+# СТАТИСТИКА - добавление данных
+def select_alldata_statistic() -> list:
+    print("select_alldata_statistic")
+    sql.execute(f'SELECT * FROM statistic')
+    list_orders = [row for row in sql.fetchall()]
+    return list_orders
+
+
+def delete_statistic() -> None:
+    print("delete_statistic")
+    sql.execute(f'DELETE statistic')
+    db.commit()
+
+
 if __name__ == '__main__':
-    db = sqlite3.connect('/Users/antonponomarev/PycharmProjects/boiko/database.db', check_same_thread=False)
-    sql = db.cursor()
-    set_busy_id(0, 843554518) #5443784834
+    # db = sqlite3.connect('/Users/antonponomarev/PycharmProjects/boiko/database.db', check_same_thread=False)
+    # sql = db.cursor()
+    # set_busy_id(0, 843554518) #5443784834
+    print(get_list_users_notadmin())
