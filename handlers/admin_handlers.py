@@ -51,9 +51,10 @@ def get_telegram_user(user_id, bot_token):
 
 # запуск бота только администраторами /start
 @router.message(CommandStart(), lambda message: check_command_for_admins(message))
-async def process_start_command(message: Message) -> None:
+async def process_start_command(message: Message, state: FSMContext) -> None:
     table_users()
     table_statistic()
+    await state.set_state(default_state)
     logging.info(f'process_start_command: {message.chat.id}')
     if str(message.chat.id) != str(config.tg_bot.admin_ids):
         await message.answer(text=MESSAGE_TEXT['admin'],
@@ -491,6 +492,7 @@ async def process_cancel_odrers(callback: CallbackQuery, state: FSMContext) -> N
 @router.callback_query(F.data == 'send_orders')
 async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     logging.info(f'process_send_orders_all: {callback.message.chat.id}')
+    await callback.message.edit_reply_markup(reply_markup=keyboard_finish_orders_one_press())
     row_services = get_row_services(user_dict[callback.message.chat.id]["select_title_service"])
     logging.info(f'process_send_orders_all:row_services {row_services}')
     add_orders(title_services=user_dict[callback.message.chat.id]["select_title_service"],
@@ -513,14 +515,14 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
             if not row_services[0][4] == 'None':
                 msg = await bot.send_photo(photo=str(row_services[0][4]),
                                            chat_id=int(row[0]),
-                                           caption=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
+                                           caption=f'Появился заказ № {id_orders[0]} на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
                                                    f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
                                                    f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
                                                    f'Готовы выполнить?',
                                              reply_markup=keyboard_ready_player(id_order=id_orders[0]))
             else:
                 msg = await bot.send_message(chat_id=int(row[0]),
-                                             text=f'Появился заказ на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
+                                             text=f'Появился заказ № {id_orders[0]} на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
                                                   f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
                                                   f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
                                                   f'Готовы выполнить?',
@@ -804,9 +806,9 @@ async def process_get_balans_admin(message: Message) -> None:
             list_player = order[3].split(',')
             for player in list_player:
                 if player.split('.')[0] in total:
-                    total[player.split('.')[0]] += order[2]
+                    total[player.split('.')[0]] += order[1]
                 else:
-                    total[player.split('.')[0]] = order[2]
+                    total[player.split('.')[0]] = order[1]
         statistika = ''
         balance = 0
         for key, value in total.items():
@@ -819,7 +821,7 @@ async def process_get_balans_admin(message: Message) -> None:
         await message.answer(text='Данные для статистики отсутствуют')
 
 
-@router.message(F.text == 'Статистика', lambda message: check_command_for_admins(message))
+@router.message(F.text == 'Сбросить', lambda message: check_command_for_admins(message))
 async def process_reset_balans_admin(message: Message) -> None:
     logging.info(f'process_reset_balans_admin: {message.chat.id}')
     delete_statistic()

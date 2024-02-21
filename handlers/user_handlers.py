@@ -154,16 +154,22 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
                     # список рассылки сообщения с заказом
                     list_sendler = info_orders[0][6].split(',')
                     print(list_sendler)
-                    for row_sendler in list_sendler:
+                    list_sendler_del = list_sendler.copy()
+                    # удаляем сообщения
+                    for i, row_sendler in enumerate(list_sendler):
                         # id чата и сообщения для удаления
                         chat_id = row_sendler.split('_')[0]
                         message_id = row_sendler.split('_')[1]
+
                         # получаем список id исполнителей [@username.id_telegram.id_message]
                         list_players = [row.split('.')[1] for row in info_orders[0][5].split(',')]
                         # если пользователь не является исполнителем, то удаляем у него заказ
                         if chat_id not in list_players:
                             await bot.delete_message(chat_id=chat_id,
                                                      message_id=message_id)
+                            list_sendler_del.remove(row_sendler)
+                    list_mailing_str = ','.join(list_sendler_del)
+                    update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=int(id_order))
                     # информируем админа о том, что пользователи для выполнения заказа собраны
                     list_admin = get_list_admin()
                     for admin in list_admin:
@@ -181,9 +187,10 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
                         else:
                             text_change_user += f'Пользователь @{get_user(int(change_user.split("_")[0]))[0]} ' \
                                                 f'заменен на @{get_user(int(change_user.split("_")[1]))[0]}\n'
-                    for chat_id in list_chat_id:
-                        await bot.send_message(chat_id=int(chat_id[0]),
-                                               text=f'Информация о заменах в заказе №{id_order}\n\n'+text_change_user)
+                    if not list_chat_id:
+                        for chat_id in list_chat_id:
+                            await bot.send_message(chat_id=int(chat_id[0]),
+                                                   text=f'Информация о заменах в заказе №{id_order}\n\n'+text_change_user)
                     await asyncio.sleep(1)
                     list_players = info_orders[0][5].split(',')
                     list_chat_id_player = [row.split('.')[1] for row in list_players]
@@ -191,7 +198,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
                     number_random = random.choice(list_chat_id_player)
                     logging.info(f'process_pass_edit_service:number_random {number_random}')
                     message_sendler = 0
-                    for info_message_sendler in list_sendler:
+                    for info_message_sendler in list_sendler_del:
                         if info_message_sendler.split('_')[0] == str(number_random):
                             message_sendler = info_message_sendler.split('_')[1]
                     await bot.edit_message_reply_markup(chat_id=int(number_random),
@@ -287,7 +294,7 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
     # chat_id=config.tg_bot.channel_id
     # print(chat_id)
     for chat_id in list_chat_id:
-        await bot.send_message(chat_id=int(chat_id[0]),
+        await bot.send_message(chat_id=chat_id,
                                text=f'<b>ОТЧЁТ № {user_dict1[message.chat.id]["id_order"]}</b>\n\n'
                                     f'<b>Выполнили:</b>\n'
                                     f'{str_player}\n\n'
@@ -313,10 +320,11 @@ async def process_get_balans(message: Message) -> None:
         total = 0
         for order in list_orders:
             list_players = order[3].split(',')
+            print(order)
             for player in list_players:
                 if player.split('.')[1] == str(message.chat.id):
-                    print(order[2])
-                    total += order[2]
+                    print(order[1])
+                    total += order[1]
         await message.answer(text=f'Ваш баланс: {total}')
     else:
         await message.answer(text='Данные для статистики отсутствуют')
@@ -326,25 +334,26 @@ async def process_get_balans(message: Message) -> None:
 @router.callback_query(F.data.startswith('change_player'))
 async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
     logging.info(f'process_change_player: {callback.message.chat.id}')
+    # обновляем занятость
     set_busy_id(busy=0, telegram_id=callback.message.chat.id)
+    # получаем номер заказа
     id_order = callback.data.split('_')[2]
+    # информация о заказе
     info_order = get_row_orders_id(int(id_order))
     print(info_order)
+    # получаем список рассылки и удаляем пользователя из списка рассылки
     list_message = info_order[0][6].split(',')
     for mes in list_message:
         if mes.split('_')[0] == str(callback.message.chat.id):
             await bot.delete_message(chat_id=callback.message.chat.id,
                                      message_id=int(mes.split('_')[1]))
-
+    # получаем список отказавшихся
     list_refuses = info_order[0][7].split(',')
-    # id_refuses = []
-    # for refuses_user in list_refuses:
-    #     id_refuses.append(refuses_user.split('_')[0].split('.')[1])
-    #     id_refuses.append(refuses_user.split('_')[0].split('.')[1])
+    # добавляем пользователя в список отказавшихся и обновляем БД
     list_refuses.append(str(callback.message.chat.id))
     list_refuses_str = ','.join(list_refuses)
     update_list_refuses(list_refuses=list_refuses_str, id_orders=int(id_order))
-
+    # удаляем пользователя из списка исполнителей и обновляем БД
     list_players: list = info_order[0][5].split(',')
     for player in list_players:
         if str(callback.message.chat.id) == player.split('.')[1]:
@@ -354,21 +363,30 @@ async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
         update_list_players(players=list_players_str, id_orders=int(id_order))
     else:
         update_list_players(players='players', id_orders=int(id_order))
-
+    # информируем администраторов о замене
     list_admin = get_list_admin()
     print(list_admin)
     for admin in list_admin:
         await bot.send_message(chat_id=admin[0],
                                text=f'Пользователь @{callback.from_user.username} отказался'
                                     f' от заказа №{id_order}')
+    # список пользователей не админов
     list_sendler = get_list_users_notadmin()
     print(list_sendler)
     list_mailing = []
+    # информация об услуге
     row_services = get_row_services(info_order[0][1])
-
+    # обновленная информация о заказе
+    info_order = get_row_orders_id(int(id_order))
+    # список рассылки
+    list_message = info_order[0][6].split(',')
+    list_message_user_id = []
+    for mes in list_message:
+        list_message_user_id.append(mes.split('_')[0])
+    # производим рассылку заказа
     for row in list_sendler:
-
-        if str(row[0]) != str(config.tg_bot.admin_ids) and str(row[0]) not in list_refuses:
+        # если пользователь не суперадмин или ранее не отказался
+        if str(row[0]) != str(config.tg_bot.admin_ids) and str(row[0]) not in list_refuses and str(row[0]) not in list_message_user_id:
             if not row_services[0][4] == 'None':
                 msg = await bot.send_photo(photo=str(row_services[0][4]),
                                            chat_id=int(row[0]),

@@ -217,8 +217,8 @@ def add_group(group) -> None:
 
 def get_channel() -> list:
     logging.info(f'get_channel')
-    sql.execute('SELECT channel_id FROM channel')
-    channel_id = [row for row in sql.fetchall()]
+    sql.execute('SELECT * FROM channel')
+    channel_id = [row[1] for row in sql.fetchall()]
     return channel_id
 
 

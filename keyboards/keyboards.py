@@ -476,6 +476,19 @@ def keyboard_finish_orders() -> None:
     )
     return keyboard
 
+def keyboard_finish_orders_one_press() -> None:
+    """
+    Клавиатура для вовращения после редактирования
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Отпрaвить',
+                                    callback_data=' ')
+    button_2 = InlineKeyboardButton(text='Отмeна',
+                                    callback_data=' ')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1, button_2]],
+    )
+    return keyboard
 
 # клавиатура подтверждения готовности участия в заказе с id = id_services
 def keyboard_ready_player(id_order) -> None:
