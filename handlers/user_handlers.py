@@ -71,7 +71,7 @@ async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
         for row in list_admin:
             await bot.send_message(chat_id=row[0],
                                    text=f'Пользователь @{message.from_user.username} авторизован')
-        await state.set_state(User.auth_token)
+        await state.set_state(default_state)
     else:
         await message.answer(text='TOKEN не прошел верификацию. Попробуйте с другим токеном')
 
