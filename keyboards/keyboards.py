@@ -10,14 +10,28 @@ def keyboards_superadmin():
     button_3 = KeyboardButton(text='Пользователь')
     button_4 = KeyboardButton(text='Прикрепить')
     button_5 = KeyboardButton(text='Статистика')
-    button_6 = KeyboardButton(text='Сбросить статистику')
+    button_6 = KeyboardButton(text='Сброс статистики')
     keyboard = ReplyKeyboardMarkup(
         keyboard=[[button_1], [button_2, button_3, button_4], [button_5, button_6]],
         resize_keyboard=True
     )
     return keyboard
-
-
+def keyboards_superadmin_one():
+    button_1 = KeyboardButton(text='Услуга')
+    button_2 = KeyboardButton(text='Статистика')
+    button_3 = KeyboardButton(text='>>>')
+    keyboard = ReplyKeyboardMarkup(keyboard=[[button_1, button_2], [button_3]],
+                                   resize_keyboard=True)
+    return keyboard
+def keyboards_superadmin_two():
+    button_1 = KeyboardButton(text='Администраторы')
+    button_2 = KeyboardButton(text='Пользователь')
+    button_3 = KeyboardButton(text='Прикрепить')
+    button_4 = KeyboardButton(text='Сброс статистики')
+    button_5 = KeyboardButton(text='<<<')
+    keyboard = ReplyKeyboardMarkup(keyboard=[[button_1, button_2], [button_3, button_4], [button_5]],
+                                   resize_keyboard=True)
+    return keyboard
 # ГЛАВНОЕ МЕНЮ АДМИН
 def keyboards_admin():
     button_2 = KeyboardButton(text='Услуга')
@@ -29,7 +43,21 @@ def keyboards_admin():
         resize_keyboard=True
     )
     return keyboard
-
+def keyboards_admin_one():
+    button_1 = KeyboardButton(text='Услуга')
+    button_2 = KeyboardButton(text='Статистика')
+    button_3 = KeyboardButton(text='>>>')
+    keyboard = ReplyKeyboardMarkup(keyboard=[[button_1, button_2], [button_3]],
+                                   resize_keyboard=True)
+    return keyboard
+def keyboards_admin_two():
+    button_2 = KeyboardButton(text='Пользователь')
+    button_3 = KeyboardButton(text='Прикрепить')
+    button_4 = KeyboardButton(text='Сброс статистики')
+    button_5 = KeyboardButton(text='<<<')
+    keyboard = ReplyKeyboardMarkup(keyboard=[[button_2], [button_3, button_4], [button_5]],
+                                   resize_keyboard=True)
+    return keyboard
 
 # ГЛАВНОЕ МЕНЮ ПОЛЬЗОВАТЕЛЬ
 def keyboards_main_user():
@@ -553,7 +581,18 @@ def keyboard_confirm_report() -> None:
                                     callback_data='yesreport')
     button_2 = InlineKeyboardButton(text='Нет',
                                     callback_data='noreport')
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[button_1, button_2]],
-    )
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_1, button_2]],)
+    return keyboard
+
+
+def keyboard_confirm_change(id_order) -> None:
+    """
+    Клавиатура для редактирования списка пользователей
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Да',
+                                    callback_data=f'yeschange_{id_order}')
+    button_2 = InlineKeyboardButton(text='Нет',
+                                    callback_data='nochange')
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_1, button_2]],)
     return keyboard

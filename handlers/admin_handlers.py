@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.filters import CommandStart, StateFilter
+from aiogram.filters import CommandStart, StateFilter, or_f
 from aiogram.types import Message
 from lexicon.lexicon_ru import MESSAGE_TEXT
 from aiogram.fsm.context import FSMContext
@@ -58,11 +58,30 @@ async def process_start_command(message: Message, state: FSMContext) -> None:
     logging.info(f'process_start_command: {message.chat.id}')
     if str(message.chat.id) != str(config.tg_bot.admin_ids):
         await message.answer(text=MESSAGE_TEXT['admin'],
-                             reply_markup=keyboards_admin())
+                             reply_markup=keyboards_admin_one())
     else:
         add_super_admin(config.tg_bot.admin_ids, f'superadmin_@{message.from_user.username}')
         await message.answer(text=MESSAGE_TEXT['superadmin'],
-                             reply_markup=keyboards_superadmin())
+                             reply_markup=keyboards_superadmin_one())
+
+
+@router.message(or_f(F.text == '>>>', F.text == '<<<'), lambda message: check_command_for_admins(message))
+async def process_change_keyboard(message: Message, state: FSMContext) -> None:
+    logging.info(f'process_change_keyboard: {message.chat.id}')
+    if message.text == '>>>':
+        if str(message.chat.id) != str(config.tg_bot.admin_ids):
+            await message.answer(text=MESSAGE_TEXT['admin'],
+                                 reply_markup=keyboards_admin_two())
+        else:
+            await message.answer(text=MESSAGE_TEXT['superadmin'],
+                                            reply_markup=keyboards_superadmin_two())
+    if message.text == '<<<':
+        if str(message.chat.id) != str(config.tg_bot.admin_ids):
+            await message.answer(text=MESSAGE_TEXT['admin'],
+                                            reply_markup=keyboards_admin_one())
+        else:
+            await message.answer(text=MESSAGE_TEXT['superadmin'],
+                                            reply_markup=keyboards_superadmin_one())
 
 
 # Прикрепить - [Канал][Беседа]
@@ -821,7 +840,7 @@ async def process_get_balans_admin(message: Message) -> None:
         await message.answer(text='Данные для статистики отсутствуют')
 
 
-@router.message(F.text == 'Сбросить', lambda message: check_command_for_admins(message))
+@router.message(F.text == 'Сброс статистики', lambda message: check_command_for_admins(message))
 async def process_reset_balans_admin(message: Message) -> None:
     logging.info(f'process_reset_balans_admin: {message.chat.id}')
     delete_statistic()

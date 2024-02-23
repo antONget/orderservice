@@ -217,7 +217,7 @@ def add_group(group) -> None:
 
 def get_channel() -> list:
     logging.info(f'get_channel')
-    sql.execute('SELECT * FROM channel')
+    sql.execute('SELECT * FROM channel ORDER BY id')
     channel_id = [row[1] for row in sql.fetchall()]
     return channel_id
 
@@ -370,7 +370,7 @@ def select_alldata_statistic() -> list:
 
 def delete_statistic() -> None:
     print("delete_statistic")
-    sql.execute(f'DELETE statistic')
+    sql.execute(f'DELETE FROM statistic')
     db.commit()
 
 
