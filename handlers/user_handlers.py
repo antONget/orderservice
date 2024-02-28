@@ -75,8 +75,10 @@ async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
                              reply_markup=keyboards_main_user())
         list_admin = get_list_admin()
         for row in list_admin:
-            await bot.send_message(chat_id=row[0],
-                                   text=f'Пользователь @{message.from_user.username} авторизован')
+            result = get_telegram_user(user_id=row[0], bot_token=config.tg_bot.token)
+            if 'result' in result:
+                await bot.send_message(chat_id=row[0],
+                                       text=f'Пользователь @{message.from_user.username} авторизован')
         await state.set_state(default_state)
     else:
         await message.answer(text='TOKEN не прошел верификацию. Попробуйте с другим токеном')
@@ -340,8 +342,10 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
     # проходим по всем исполнителям заказа
     for row in info_orders[0][5].split(','):
         list_players.append(f'@{row.split(".")[0]} ({cost_order})')
-        await bot.send_message(chat_id=int(row.split(".")[1]),
-                               text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b> отправлен!')
+        result = get_telegram_user(user_id=int(row.split(".")[1]), bot_token=config.tg_bot.token)
+        if 'result' in result:
+            await bot.send_message(chat_id=int(row.split(".")[1]),
+                                   text=f'<b>ОТЧЁТ по заказу {user_dict1[message.chat.id]["id_order"]}: {title_order}</b> отправлен!')
         # освобождаем исполнителя
         set_busy_id(0, int(row.split(".")[1]))
         # удаляем заказ у исполнителей list_mailer [id, message_id]
