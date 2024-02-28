@@ -390,14 +390,14 @@ async def process_select_services(callback: CallbackQuery) -> None:
 
 
 # >>>>
-@router.callback_query(F.data.startswith('process_serviceselectforward'))
+@router.callback_query(F.data.startswith('serviceselectforward'))
 async def process_serviceselectforward(callback: CallbackQuery) -> None:
     logging.info(f'process_serviceselectforward: {callback.message.chat.id}')
     list_services = get_list_services()
     forward = int(callback.data.split('_')[1]) + 1
     back = forward - 2
     count_item = 6
-    keyboard = keyboards_edit_services(list_services, back, forward, count_item)
+    keyboard = keyboards_select_services(list_services, back, forward, count_item)
     try:
         await callback.message.edit_text(text='Выберите услугу для создания заказа:',
                                          reply_markup=keyboard)
@@ -414,7 +414,7 @@ async def process_serviceselectback(callback: CallbackQuery) -> None:
     back = int(callback.data.split('_')[1]) - 1
     forward = back + 2
     count_item = 6
-    keyboard = keyboards_edit_services(list_services, back, forward, count_item)
+    keyboard = keyboards_select_services(list_services, back, forward, count_item)
     try:
         await callback.message.edit_text(text='Выберите услугу для создания заказа:',
                                          reply_markup=keyboard)
@@ -424,7 +424,7 @@ async def process_serviceselectback(callback: CallbackQuery) -> None:
 
 
 # добавление услуги в заказ
-@router.callback_query(F.data.startswith('serviceselect'))
+@router.callback_query(F.data.startswith('kserviceselect'))
 async def process_serviceselect(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'process_serviceselect: {callback.message.chat.id}')
     title_service = callback.data.split('_')[1]
@@ -531,21 +531,23 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
         # print(row[0], config.tg_bot.admin_ids)
         # print(str(row[0]) == str(config.tg_bot.admin_ids))
         if str(row[0]) != str(config.tg_bot.admin_ids):
-            if not row_services[0][4] == 'None':
-                msg = await bot.send_photo(photo=str(row_services[0][4]),
-                                           chat_id=int(row[0]),
-                                           caption=f'Появился заказ № {id_orders[0]} на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
-                                                   f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
-                                                   f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
-                                                   f'Готовы выполнить?',
-                                             reply_markup=keyboard_ready_player(id_order=id_orders[0]))
-            else:
-                msg = await bot.send_message(chat_id=int(row[0]),
-                                             text=f'Появился заказ № {id_orders[0]} на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
-                                                  f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
-                                                  f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
-                                                  f'Готовы выполнить?',
-                                             reply_markup=keyboard_ready_player(id_order=id_orders[0]))
+            result = get_telegram_user(user_id=row[0], bot_token=config.tg_bot.token)
+            if 'result' in result:
+                if not row_services[0][4] == 'None':
+                    msg = await bot.send_photo(photo=str(row_services[0][4]),
+                                               chat_id=int(row[0]),
+                                               caption=f'Появился заказ № {id_orders[0]} на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
+                                                       f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
+                                                       f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
+                                                       f'Готовы выполнить?',
+                                                 reply_markup=keyboard_ready_player(id_order=id_orders[0]))
+                else:
+                    msg = await bot.send_message(chat_id=int(row[0]),
+                                                 text=f'Появился заказ № {id_orders[0]} на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
+                                                      f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
+                                                      f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
+                                                      f'Готовы выполнить?',
+                                                 reply_markup=keyboard_ready_player(id_order=id_orders[0]))
             iduser_idmessage = f'{row[0]}_{msg.message_id}'
             list_mailing.append(iduser_idmessage)
     # msg = await bot.send_message(chat_id=config.tg_bot.admin_ids,
