@@ -154,6 +154,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
             count_players = info_orders[0][4]
             # количество исполнителей готовых выполнить заказ len(players)
             if info_orders[0][5] == 'players':
+                print('players', [])
                 players = []
             else:
                 players = info_orders[0][5].split(',')
@@ -164,6 +165,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
                 message_del = '0'
                 # проходим циклом по списку и находим номер сообщения для пользователя взявшего заказ на исполнение
                 for telegram_id_message in list_sendler:
+                    print(telegram_id_message)
                     if telegram_id_message.split('_')[0] == str(callback.message.chat.id):
                         print(callback.message.chat.id, telegram_id_message.split('_')[1])
                         message_del = telegram_id_message.split('_')[1]
@@ -217,13 +219,19 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
                     list_mailing_str = ','.join(list_sendler_del)
                     # обновляем список сообщений для удалений
                     update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=int(id_order))
+                    playerlist = info_orders[0][5].split(',')
+                    text_player = 'Выполняют:\n'
+                    for p in playerlist:
+                        text_player += f'@{p.split(".")[0]}\n'
                     # информируем админа о том, что пользователи для выполнения заказа собраны
                     list_admin = get_list_admin()
                     for admin in list_admin:
                         result = get_telegram_user(user_id=admin[0], bot_token=config.tg_bot.token)
                         if 'result' in result:
+
                             await bot.send_message(chat_id=admin[0],
-                                                   text=f'Заказ № {id_order} в работе!')
+                                                   text=f'Заказ № {id_order} в работе!\n\n'
+                                                        f'{text_player}')
                     # отправляем информацию в канал и группу
                     list_chat_id = get_channel()
                     # список отказавшихся от выполнения заказа @username.telegram_id
@@ -336,6 +344,7 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
     cost_order = info_orders[0][2]
     # список рассылки
     list_mailer = info_orders[0][6].split(',')
+    list_player_ = info_orders[0][5].split(',')
     total = info_orders[0][2] * info_orders[0][4]
     # получаем username иполнителей
     list_players = []
@@ -349,10 +358,11 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
         # освобождаем исполнителя
         set_busy_id(0, int(row.split(".")[1]))
         # удаляем заказ у исполнителей list_mailer [id, message_id]
-        for iduser_idmessage in list_mailer:
-            if int(iduser_idmessage.split('_')[0]) == int(row.split(".")[1]):
-                await bot.delete_message(chat_id=int(row.split(".")[1]),
-                                         message_id=int(iduser_idmessage.split('_')[1]))
+        # for iduser_idmessage in list_player_:
+        #     if int(iduser_idmessage.split('_')[0]) == int(row.split(".")[1]):
+        print("chat_id",int(row.split(".")[1]),"message_id",int(row.split(".")[2]))
+        await bot.delete_message(chat_id=int(row.split(".")[1]),
+                                 message_id=int(row.split(".")[2]))
         # for player in info_orders[0][5].split(','):
         #     await bot.delete_message(chat_id=int(row.split(".")[1]),
         #                              message_id=int(row.split(".")[2]))
