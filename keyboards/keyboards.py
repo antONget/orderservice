@@ -19,8 +19,9 @@ def keyboards_superadmin():
 def keyboards_superadmin_one():
     button_1 = KeyboardButton(text='Услуга')
     button_2 = KeyboardButton(text='Статистика')
+    button_0 = KeyboardButton(text='Скинуть занятость')
     button_3 = KeyboardButton(text='>>>')
-    keyboard = ReplyKeyboardMarkup(keyboard=[[button_1, button_2], [button_3]],
+    keyboard = ReplyKeyboardMarkup(keyboard=[[button_1, button_2],[button_0], [button_3]],
                                    resize_keyboard=True)
     return keyboard
 def keyboards_superadmin_two():

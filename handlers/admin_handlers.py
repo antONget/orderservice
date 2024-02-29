@@ -16,7 +16,7 @@ from module.data_base import check_command_for_admins, table_users, add_token, t
     get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins,\
     table_services, add_services, get_list_services, delete_services, update_service, get_cost_service, table_orders,\
     add_orders, get_row_services, get_id_last_orders, update_list_sendlers, add_super_admin, add_channel, add_group, \
-    get_list_users_notadmin, table_statistic, select_alldata_statistic, delete_statistic
+    get_list_users_notadmin, table_statistic, select_alldata_statistic, delete_statistic, set_busy_id
 import requests
 
 
@@ -82,6 +82,14 @@ async def process_change_keyboard(message: Message, state: FSMContext) -> None:
         else:
             await message.answer(text=MESSAGE_TEXT['superadmin'],
                                             reply_markup=keyboards_superadmin_one())
+
+
+@router.message(F.text == 'Скинуть занятость', lambda message: check_command_for_admins(message))
+async def process_change_channel(message: Message, state: FSMContext) -> None:
+    # telegram_id, username
+    list_user = get_list_notadmins()
+    for user in list_user:
+        set_busy_id(0, user[0])
 
 
 # Прикрепить - [Канал][Беседа]
