@@ -529,6 +529,15 @@ def keyboard_ready_player(id_order) -> None:
     )
     return keyboard
 
+def keyboard_ready_player_() -> None:
+
+    button_1 = InlineKeyboardButton(text='Да',
+                                    callback_data='---')
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[button_1]],
+    )
+    return keyboard
+
 
 def keyboard_send_report(id_order) -> None:
     """

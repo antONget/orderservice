@@ -86,7 +86,7 @@ async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
 
 # реакция пользователя на заказ
 @router.callback_query(F.data.startswith('ready'))
-async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
+async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FSMContext) -> None:
     """
     Согласие на выполнение заказа, нажата кнопка "ДА"
     проверка на занятость пользователя в других заказах
@@ -100,177 +100,196 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot) -> None:
         await callback.answer(text='Вы не можете брать другие заказы, пока не будет получен отчет!',
                               show_alert=True)
     else:
-        # устанавливаем занятость
-        set_busy_id(1, callback.message.chat.id)
+        user_dict1[callback.message.chat.id] = await state.get_data()
+        if 'ready_order' not in user_dict1[callback.message.chat.id]:
+            await state.update_data(ready_order=callback.message.chat.id)
+            # устанавливаем занятость
+            set_busy_id(1, callback.message.chat.id)
 
-        ready = callback.data.split('_')[1]
-        # получаем номер заказа из callback = f'ready_yes_{id_order}'
-        id_order = callback.data.split('_')[2]
-        # пользователь согласился выполнить заказ
-        if ready == 'yes':
-            # получаем информацию о заказе по его номеру
-            info_orders = get_row_orders_id(int(id_order))
-            # список отказавшихся от выполнения заказа @username_telegram_id
-            change_list = info_orders[0][7].split(',')
-            player_list = info_orders[0][5].split(',')
-            logging.info(f'process_pass_edit_service:change_list {change_list}')
-            # if len(change_list) > 1:
-            # информируем администратора о замене (информируем только если в столбце замены есть данные id_id)
-            # for change_user in change_list:
-                # если количество замененых равно количеству исполнителей и исполнители есть
+            ready = callback.data.split('_')[1]
+            # получаем номер заказа из callback = f'ready_yes_{id_order}'
+            id_order = callback.data.split('_')[2]
+            # пользователь согласился выполнить заказ
+            if ready == 'yes':
+                # получаем информацию о заказе по его номеру
+                info_orders = get_row_orders_id(int(id_order))
+                # список отказавшихся от выполнения заказа @username_telegram_id
+                change_list = info_orders[0][7].split(',')
+                player_list = info_orders[0][5].split(',')
+                logging.info(f'process_pass_edit_service:change_list {change_list}')
+                # if len(change_list) > 1:
+                # информируем администратора о замене (информируем только если в столбце замены есть данные id_id)
+                # for change_user in change_list:
+                    # если количество замененых равно количеству исполнителей и исполнители есть
 
-            # если замены еще никто не брал, или все замены произведены
-            if 'change' in change_list or change_list[-1].split('.')[1] == '1':
-                print("change_user", change_list)
-            # если замена выполнена на не произведена
-            else:
-                # изменяем строку замены
-                # change_list[i] = change_user + '_' + str(callback.message.chat.id)
-                # изменяем список замены
-                # change_list.append(str(callback.message.chat.id))
-                # проходим циклом по списку замен, так как может быть что замен будет одновременно больше одной и
-                # тогда замена последнего пользователя будет не корректна
-                for ii, change_user in enumerate(change_list):
-                    if change_user.split('.')[1] == '0':
-                        # список админов
-                        list_admin = get_list_admin()
-                        logging.info(f'process_pass_edit_service:list_admin {list_admin}')
-                        # информируем админов о произведенной замене
-                        for admin in list_admin:
-                            result = get_telegram_user(user_id=admin[0], bot_token=config.tg_bot.token)
-                            if 'result' in result:
-                                await bot.send_message(chat_id=admin[0],
-                                                       text=f'Пользователь @{callback.from_user.username} взял заказ'
-                                                            f' №{id_order} вместо @{get_user(int(change_list[ii].split(".")[0]))[0]}')
-                        # изменяем значение
-                        change_list[ii] = f'{change_list[ii].split(".")[0]}.1'
-                        change_list_str = ','.join(change_list)
-                        # обновляем список замен в базе
-                        update_list_refuses(list_refuses=change_list_str, id_orders=int(id_order))
-                        # прерываем цикл так производим одну замену
-                        break
-
-            # требуемое количество исполнителей
-            count_players = info_orders[0][4]
-            # количество исполнителей готовых выполнить заказ len(players)
-            if info_orders[0][5] == 'players':
-                print('players', [])
-                players = []
-            else:
-                players = info_orders[0][5].split(',')
-            # если количество исполнителей для услуги меньше готовых ее выполнить (пулл исполнителей не собран)
-            if count_players > len(players):
-                # получаем список сообщений рассылки с заказом и номер сообщения
-                list_sendler = info_orders[0][6].split(',')
-                message_del = '0'
-                # проходим циклом по списку и находим номер сообщения для пользователя взявшего заказ на исполнение
-                for telegram_id_message in list_sendler:
-                    print(telegram_id_message)
-                    if telegram_id_message.split('_')[0] == str(callback.message.chat.id):
-                        print(callback.message.chat.id, telegram_id_message.split('_')[1])
-                        message_del = telegram_id_message.split('_')[1]
-                        list_sendler.remove(telegram_id_message)
-                # добавляем пользователя в список исполнителей
-                players.append(f'{callback.from_user.username}.{callback.message.chat.id}.{message_del}')
-                # объединяем в строку пользователей согласившихся выполнять заказ
-                new_players = ','.join(players)
-                list_mailing_str = ','.join(list_sendler)
-                # обновляем заказ в базе в плане исполнителей
-                update_list_players(new_players, int(id_order))
-                update_list_sendlers(list_mailing_str, id_orders=int(id_order))
-                # info_order = get_row_orders_id(int(id_order))
-                # list_message = info_order[0][6].split(',')
-                # for mes in list_message:
-                #     if mes.split('_')[0] == str(callback.message.chat.id):
-                # обновляем клавиатуру с ДА на ЗАМЕНИТЬ
-                await callback.message.edit_reply_markup(reply_markup=keyboard_change_player(id_order))
-                await callback.answer('Отлично вы взяли заказ!\n'
-                                      'Вы не можете брать другие заказы, пока не будет получен отчет!',
-                                      show_alert=True)
-
-                # если пользователь был последним в списке (пулле) требуемых исполнителей
-                if not count_players - len(players):
-                    # обновляем информацию о заказе
-                    info_orders = get_row_orders_id(int(id_order))
-                    # список рассылки сообщения с заказом для удаления сообщений не взявших заказ на исполнение
-                    list_sendler = info_orders[0][6].split(',')
-                    print(list_sendler)
-                    # создаем копию списка с данными для удаления сообщений
-                    list_sendler_del = list_sendler.copy()
-                    # проходим по списку разосланных сообщений и удаляем сообщения у пользователей не взявших заказ
-                    for i, row_sendler in enumerate(list_sendler):
-                        # id чата и сообщения для удаления
-                        chat_id = row_sendler.split('_')[0]
-                        message_id = row_sendler.split('_')[1]
-                        print(info_orders)
-                        # получаем список id исполнителей [@username.id_telegram.id_message.number_message]
-                        list_players = [row.split('.')[1] for row in info_orders[0][5].split(',')]
-                        # если пользователь не является исполнителем, то удаляем у него заказ и
-                        # удаляем из списка сообщений для последующей рассылки
-                        if chat_id not in list_players:
-                            result = get_telegram_user(user_id=chat_id, bot_token=config.tg_bot.token)
-                            if 'result' in result:
-                                print('chat_id', chat_id, 'message_id', message_id)
-                                await bot.delete_message(chat_id=chat_id,
-                                                         message_id=message_id)
-                                # оставляем сообщения только тех кто не взял заказ
-                                list_sendler_del.remove(row_sendler)
-                    # обновляем список чатов разослонных сообщений и их номеров
-                    list_mailing_str = ','.join(list_sendler_del)
-                    # обновляем список сообщений для удалений
-                    update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=int(id_order))
-                    playerlist = info_orders[0][5].split(',')
-                    text_player = 'Выполняют:\n'
-                    for p in playerlist:
-                        text_player += f'@{p.split(".")[0]}\n'
-                    # информируем админа о том, что пользователи для выполнения заказа собраны
-                    list_admin = get_list_admin()
-                    for admin in list_admin:
-                        result = get_telegram_user(user_id=admin[0], bot_token=config.tg_bot.token)
-                        if 'result' in result:
-
-                            await bot.send_message(chat_id=admin[0],
-                                                   text=f'Заказ № {id_order} в работе!\n\n'
-                                                        f'{text_player}')
-                    # отправляем информацию в канал и группу
-                    list_chat_id = get_channel()
-                    # список отказавшихся от выполнения заказа @username.telegram_id
-                    change_list = info_orders[0][7].split(',')
-                    player_list = info_orders[0][5].split(',')
-                    # формируем информацию о заменах
-                    text_change_user = ''
-                    for i, change_user in enumerate(change_list[::-1]):
-                        if change_user == 'change':
+                # если замены еще никто не брал, или все замены произведены
+                if 'change' in change_list or change_list[-1].split('.')[1] == '1':
+                    print("change_user", change_list)
+                # если замена выполнена на не произведена
+                else:
+                    # изменяем строку замены
+                    # change_list[i] = change_user + '_' + str(callback.message.chat.id)
+                    # изменяем список замены
+                    # change_list.append(str(callback.message.chat.id))
+                    # проходим циклом по списку замен, так как может быть что замен будет одновременно больше одной и
+                    # тогда замена последнего пользователя будет не корректна
+                    for ii, change_user in enumerate(change_list):
+                        if change_user.split('.')[1] == '0':
+                            # список админов
+                            list_admin = get_list_admin()
+                            logging.info(f'process_pass_edit_service:list_admin {list_admin}')
+                            # информируем админов о произведенной замене
+                            for admin in list_admin:
+                                result = get_telegram_user(user_id=admin[0], bot_token=config.tg_bot.token)
+                                if 'result' in result:
+                                    await bot.send_message(chat_id=admin[0],
+                                                           text=f'Пользователь @{callback.from_user.username} взял заказ'
+                                                                f' №{id_order} вместо @{get_user(int(change_list[ii].split(".")[0]))[0]}')
+                            # изменяем значение
+                            change_list[ii] = f'{change_list[ii].split(".")[0]}.1'
+                            change_list_str = ','.join(change_list)
+                            # обновляем список замен в базе
+                            update_list_refuses(list_refuses=change_list_str, id_orders=int(id_order))
+                            # прерываем цикл так производим одну замену
                             break
-                        else:
-                            num = -i-1
-                            text_change_user += f'Пользователь @{get_user(int(change_user.split(".")[0]))[0]} ' \
-                                                f'заменен на @{get_user(int(player_list[num].split(".")[1]))[0]}\n'
-                    # производим рассылку информации о заменах в канал и беседу
-                    if list_chat_id and text_change_user != '':
+
+                # требуемое количество исполнителей
+                count_players = info_orders[0][4]
+                # количество исполнителей готовых выполнить заказ len(players)
+                if info_orders[0][5] == 'players':
+                    print('players', [])
+                    players = []
+                else:
+                    players = info_orders[0][5].split(',')
+                # если количество исполнителей для услуги меньше готовых ее выполнить (пулл исполнителей не собран)
+                if count_players > len(players):
+                    # получаем список сообщений рассылки с заказом и номер сообщения
+                    list_sendler = info_orders[0][6].split(',')
+                    message_del = '0'
+                    print(list_sendler)
+                    print(f'{callback.from_user.username}.{callback.message.chat.id}.{message_del}')
+                    # проходим циклом по списку и находим номер сообщения для пользователя взявшего заказ на исполнение
+                    for telegram_id_message in list_sendler:
+                        print(list_sendler)
+                        print('telegram_id_message', telegram_id_message)
+                        if telegram_id_message.split('_')[0] == str(callback.message.chat.id):
+                            print(callback.message.chat.id, telegram_id_message.split('_')[1])
+                            message_del = telegram_id_message.split('_')[1]
+                            list_sendler.remove(telegram_id_message)
+                    # добавляем пользователя в список исполнителей
+                    print(f'{callback.from_user.username}.{callback.message.chat.id}.{message_del}')
+                    players.append(f'{callback.from_user.username}.{callback.message.chat.id}.{message_del}')
+                    # объединяем в строку пользователей согласившихся выполнять заказ
+                    new_players = ','.join(players)
+                    list_mailing_str = ','.join(list_sendler)
+                    # обновляем заказ в базе в плане исполнителей
+                    update_list_players(new_players, int(id_order))
+                    update_list_sendlers(list_mailing_str, id_orders=int(id_order))
+                    # info_order = get_row_orders_id(int(id_order))
+                    # list_message = info_order[0][6].split(',')
+                    # for mes in list_message:
+                    #     if mes.split('_')[0] == str(callback.message.chat.id):
+                    # обновляем клавиатуру с ДА на ЗАМЕНИТЬ
+                    await callback.message.edit_reply_markup(reply_markup=keyboard_change_player(id_order))
+                    await callback.answer('Отлично вы взяли заказ!\n'
+                                          'Вы не можете брать другие заказы, пока не будет получен отчет!',
+                                          show_alert=True)
+
+                    # если пользователь был последним в списке (пулле) требуемых исполнителей
+                    if not count_players - len(players):
+                        # обновляем информацию о заказе
+                        info_orders = get_row_orders_id(int(id_order))
+                        # список рассылки сообщения с заказом для удаления сообщений не взявших заказ на исполнение
+                        list_sendler = info_orders[0][6].split(',')
+                        print(list_sendler)
+                        # создаем копию списка с данными для удаления сообщений
+                        list_sendler_del = list_sendler.copy()
+                        # проходим по списку разосланных сообщений и удаляем сообщения у пользователей не взявших заказ
+                        for i, row_sendler in enumerate(list_sendler):
+                            # id чата и сообщения для удаления
+                            chat_id = row_sendler.split('_')[0]
+                            message_id = row_sendler.split('_')[1]
+                            print(info_orders)
+                            # получаем список id исполнителей [@username.id_telegram.id_message.number_message]
+                            list_players = [row.split('.')[1] for row in info_orders[0][5].split(',')]
+                            # если пользователь не является исполнителем, то удаляем у него заказ и
+                            # удаляем из списка сообщений для последующей рассылки
+                            if chat_id not in list_players:
+                                result = get_telegram_user(user_id=chat_id, bot_token=config.tg_bot.token)
+                                if 'result' in result:
+                                    print('chat_id', chat_id, 'message_id', message_id)
+                                    await bot.delete_message(chat_id=chat_id,
+                                                             message_id=message_id)
+                                    # оставляем сообщения только тех кто не взял заказ
+                                    list_sendler_del.remove(row_sendler)
+                        # обновляем список чатов разослонных сообщений и их номеров
+                        list_mailing_str = ','.join(list_sendler_del)
+                        # обновляем список сообщений для удалений
+                        update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=int(id_order))
+
+                        # сообщение для информирования об исполнителях
+                        playerlist = info_orders[0][5].split(',')
+                        text_player = 'Выполняют:\n'
+                        for p in playerlist:
+                            text_player += f'@{p.split(".")[0]}\n'
+
+                        # отправляев в канал и беседу сообщение об исполнителях выполняющих заказ
+                        list_chat_id = get_channel()
                         for chat_id in list_chat_id:
                             result = get_telegram_user(user_id=int(chat_id), bot_token=config.tg_bot.token)
                             if 'result' in result:
                                 await bot.send_message(chat_id=int(chat_id),
-                                                       text=f'Замена в заказе №{id_order}\n\n'+text_change_user)
-                    await asyncio.sleep(1)
-                    # получаем обновленный список исполнителей
-                    list_players = info_orders[0][5].split(',')
-                    # список id исполнителей
-                    list_chat_id_player = [row.split('.') for row in list_players if row.split('.')[1] == str(callback.message.chat.id)]
-                    logging.info(f'process_pass_edit_service:list_chat_id_player {list_chat_id_player}')
-                    # случайно выбираем исполнителя
-                    number_random = random.choice(list_chat_id_player)
-                    logging.info(f'process_pass_edit_service:number_random {number_random}')
-                    # message_sendler = 0
-                    # for info_message_sendler in list_sendler_del:
-                    #     if info_message_sendler.split('_')[0] == str(number_random):
-                    #         message_sendler = info_message_sendler.split('_')[1]
-                    await bot.edit_message_reply_markup(chat_id=int(number_random[1]),
-                                                        message_id=int(number_random[2]),
-                                                        reply_markup=keyboard_send_report(id_order))
-        else:
-            await callback.message.answer(text=f'Жаль, выполнит заказ другой')
+                                                       text=f'Заказ № {id_order} в работе!\n\n'
+                                                            f'{text_player}')
+
+                        # информируем админа о том, что пользователи для выполнения заказа собраны
+                        list_admin = get_list_admin()
+                        for admin in list_admin:
+                            result = get_telegram_user(user_id=admin[0], bot_token=config.tg_bot.token)
+                            if 'result' in result:
+
+                                await bot.send_message(chat_id=admin[0],
+                                                       text=f'Заказ № {id_order} в работе!\n\n'
+                                                            f'{text_player}')
+                        # отправляем информацию в канал и группу
+                        list_chat_id = get_channel()
+                        # список отказавшихся от выполнения заказа @username.telegram_id
+                        change_list = info_orders[0][7].split(',')
+                        player_list = info_orders[0][5].split(',')
+                        # формируем информацию о заменах
+                        text_change_user = ''
+                        for i, change_user in enumerate(change_list[::-1]):
+                            if change_user == 'change':
+                                break
+                            else:
+                                num = -i-1
+                                text_change_user += f'Пользователь @{get_user(int(change_user.split(".")[0]))[0]} ' \
+                                                    f'заменен на @{get_user(int(player_list[num].split(".")[1]))[0]}\n'
+                        # производим рассылку информации о заменах в канал и беседу
+                        if list_chat_id and text_change_user != '':
+                            for chat_id in list_chat_id:
+                                result = get_telegram_user(user_id=int(chat_id), bot_token=config.tg_bot.token)
+                                if 'result' in result:
+                                    await bot.send_message(chat_id=int(chat_id),
+                                                           text=f'Замена в заказе №{id_order}\n\n'+text_change_user)
+                        await asyncio.sleep(1)
+                        # получаем обновленный список исполнителей
+                        list_players = info_orders[0][5].split(',')
+                        # список id исполнителей
+                        list_chat_id_player = [row.split('.') for row in list_players if row.split('.')[1] == str(callback.message.chat.id)]
+                        logging.info(f'process_pass_edit_service:list_chat_id_player {list_chat_id_player}')
+                        # случайно выбираем исполнителя
+                        number_random = random.choice(list_chat_id_player)
+                        logging.info(f'process_pass_edit_service:number_random {number_random}')
+                        # message_sendler = 0
+                        # for info_message_sendler in list_sendler_del:
+                        #     if info_message_sendler.split('_')[0] == str(number_random):
+                        #         message_sendler = info_message_sendler.split('_')[1]
+                        await bot.edit_message_reply_markup(chat_id=int(number_random[1]),
+                                                            message_id=int(number_random[2]),
+                                                            reply_markup=keyboard_send_report(id_order))
+            else:
+                await callback.message.answer(text=f'Жаль, выполнит заказ другой')
 
 
 @router.callback_query(F.data.startswith('report'))

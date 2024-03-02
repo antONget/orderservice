@@ -548,14 +548,14 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
                                                        f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
                                                        f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
                                                        f'Готовы выполнить?',
-                                                 reply_markup=keyboard_ready_player(id_order=id_orders[0]))
+                                               reply_markup=keyboard_ready_player_())
                 else:
                     msg = await bot.send_message(chat_id=int(row[0]),
                                                  text=f'Появился заказ № {id_orders[0]} на : {user_dict[callback.message.chat.id]["select_title_service"]}.\n'
                                                       f'Стоимость {user_dict[callback.message.chat.id]["select_cost_service"]}\n'
                                                       f'Комментарий <code>{user_dict[callback.message.chat.id]["select_comment_service"]}</code>\n'
                                                       f'Готовы выполнить?',
-                                                 reply_markup=keyboard_ready_player(id_order=id_orders[0]))
+                                                 reply_markup=keyboard_ready_player_())
             iduser_idmessage = f'{row[0]}_{msg.message_id}'
             list_mailing.append(iduser_idmessage)
     # msg = await bot.send_message(chat_id=config.tg_bot.admin_ids,
@@ -569,6 +569,16 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
     await callback.message.answer(text=f'Заказ № {id_orders[0]} успешно отправлен!')
     list_mailing_str = ','.join(list_mailing)
     update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=id_orders[0])
+    for row in list_mailing:
+        # print(row[0], config.tg_bot.admin_ids)
+        # print(str(row[0]) == str(config.tg_bot.admin_ids))
+        if str(row.split('_')[0]) != str(config.tg_bot.admin_ids):
+            result = get_telegram_user(user_id=row.split('_')[0], bot_token=config.tg_bot.token)
+            if 'result' in result:
+                await bot.edit_message_reply_markup(chat_id=int(row.split('_')[0]),
+                                                    message_id=int(row.split('_')[1]),
+                                                    reply_markup=keyboard_ready_player(id_order=id_orders[0]))
+
     await state.set_state(default_state)
 
 
