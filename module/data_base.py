@@ -371,6 +371,7 @@ def select_alldata_statistic() -> list:
 
 def delete_statistic() -> None:
     print("delete_statistic")
+    sql.execute(f'DELETE FROM orders')
     sql.execute(f'DELETE FROM statistic')
     db.commit()
 
