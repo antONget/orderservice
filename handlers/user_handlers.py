@@ -101,8 +101,9 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                               show_alert=True)
     else:
         user_dict1[callback.message.chat.id] = await state.get_data()
-        if 'ready_order' not in user_dict1[callback.message.chat.id]:
-            await state.update_data(ready_order=callback.message.chat.id)
+        ready_order = f"{callback.message.chat.id}.{callback.data.split('_')[2]}"
+        if 'ready_order' not in user_dict1[callback.message.chat.id] or user_dict1[callback.message.chat.id]['ready_order'] != ready_order:
+            await state.update_data(ready_order=f"{callback.message.chat.id}.{callback.data.split('_')[2]}")
             # устанавливаем занятость
             set_busy_id(1, callback.message.chat.id)
 
