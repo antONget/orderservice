@@ -531,7 +531,7 @@ def keyboard_ready_player(id_order) -> None:
 
 def keyboard_ready_player_() -> None:
 
-    button_1 = InlineKeyboardButton(text='Да',
+    button_1 = InlineKeyboardButton(text='Подождите...',
                                     callback_data='---')
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[[button_1]],
