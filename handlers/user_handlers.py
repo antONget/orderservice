@@ -13,7 +13,7 @@ import asyncio
 from module.data_base import check_command_for_admins, table_users, check_command_for_user, get_row_orders_id, \
     update_list_players, get_channel, get_list_admin, get_busy_id, set_busy_id, update_report, add_statistic, \
     select_alldata_statistic, table_statistic, update_list_refuses, get_list_users_notadmin, get_row_services, \
-    update_list_sendlers, get_user
+    update_list_sendlers, get_user, get_list_users
 import logging
 from config_data.config import Config, load_config
 from module.data_base import check_token
@@ -531,7 +531,7 @@ async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
     if len(list_players) == info_order[0][4] - 1:
         print('Рассылка если после собранного пула кто-то отказался')
         # список пользователей не админов
-        list_sendler = get_list_users_notadmin()
+        list_sendler = get_list_users()
         print(list_sendler)
         list_mailing = []
         # информация об услуге
