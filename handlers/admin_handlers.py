@@ -19,12 +19,14 @@ from module.data_base import check_command_for_admins, table_users, add_token, t
     get_list_users_notadmin, table_statistic, select_alldata_statistic, delete_statistic, set_busy_id, \
     update_username_admin, get_row_orders_id, delete_orders
 import requests
+# from handlers.user_handlers import user_dict1
 
 
 router = Router()
 # Загружаем конфиг в переменную config
 config: Config = load_config()
 user_dict = {}
+user_dict_player = {}
 table_users()
 # add_super_admin(config.tg_bot.admin_ids, 'superadmin')
 
@@ -99,7 +101,7 @@ async def process_change_keyboard(message: Message, state: FSMContext) -> None:
 @router.message(F.text == 'Скинуть занятость', lambda message: check_command_for_admins(message))
 async def process_change_channel(message: Message, state: FSMContext) -> None:
     # telegram_id, username
-    list_user = get_list_notadmins()
+    list_user = get_list_users()
     for user in list_user:
         set_busy_id(0, user[0])
 
@@ -608,16 +610,23 @@ async def process_delete_order(callback: CallbackQuery, state: FSMContext, bot: 
             await bot.delete_message(chat_id=int(player.split('.')[1]),
                                      message_id=int(player.split('.')[2]))
             set_busy_id(busy=0, telegram_id=int(player.split('.')[1]))
+            # print('before', user_dict1)
+            user_dict_player[int(player.split('.')[1])] = id_order
+            # del user_dict1[int(player.split('.')[1])]['ready_order']
+            # print('after', user_dict1)
+            # await state.update_data(ready_order=f"{callback.message.chat.id}.{0}")
         except:
-            await callback.message.answer(text=f'При удалении заказа № {id_order} у пользователя {player}'
+            await callback.message.answer(text=f'При удалении p заказа № {id_order} у пользователя {player}'
                                                f' возникла ошибка')
-    for sendler in list_sendler:
-        try:
-            await bot.delete_message(chat_id=int(sendler.split('_')[0]),
-                                     message_id=int(sendler.split('_')[1]))
-        except:
-            await callback.message.answer(text=f'При удалении заказа № {id_order} у пользователя {sendler}'
-                                               f' возникла ошибка')
+    if list_sendler == '':
+        print(list_sendler)
+        for sendler in list_sendler:
+            try:
+                await bot.delete_message(chat_id=int(sendler.split('_')[0]),
+                                         message_id=int(sendler.split('_')[1]))
+            except:
+                await callback.message.answer(text=f'При удалении заказа № {id_order} у пользователя {sendler}'
+                                                   f' возникла ошибка')
     delete_orders(id_orders=int(id_order))
     await callback.message.answer(text=f'Заказ {id_order} удален!')
 

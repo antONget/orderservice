@@ -17,6 +17,7 @@ from module.data_base import check_command_for_admins, table_users, check_comman
 import logging
 from config_data.config import Config, load_config
 from module.data_base import check_token
+from handlers.admin_handlers import user_dict_player
 
 router = Router()
 # Загружаем конфиг в переменную config
@@ -100,12 +101,16 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
         await callback.answer(text='Вы не можете брать другие заказы, пока не будет получен отчет!',
                               show_alert=True)
     else:
-        print(user_dict1)
         user_dict1[callback.message.chat.id] = await state.get_data()
         ready_order = f"{callback.message.chat.id}.{callback.data.split('_')[2]}"
-        if 'ready_order' not in user_dict1[callback.message.chat.id] or user_dict1[callback.message.chat.id]['ready_order'] != ready_order:
+        print('105', user_dict1)
+
+        if 'ready_order' not in user_dict1[callback.message.chat.id] or\
+                user_dict1[callback.message.chat.id]['ready_order'] != ready_order or\
+                user_dict_player[callback.message.chat.id] == callback.data.split('_')[2]:
             print("user_dict1[callback.message.chat.id]", user_dict1[callback.message.chat.id])
             await state.update_data(ready_order=f"{callback.message.chat.id}.{callback.data.split('_')[2]}")
+            user_dict1[callback.message.chat.id] = await state.get_data()
             # устанавливаем занятость
             set_busy_id(1, callback.message.chat.id)
 
