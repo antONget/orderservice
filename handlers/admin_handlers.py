@@ -74,6 +74,7 @@ async def process_start_command(message: Message, state: FSMContext) -> None:
 @router.message(F.text, lambda message: check_command_for_admins(message), StateFilter(Stage.get_name))
 async def process_start_command(message: Message, state: FSMContext) -> None:
     update_username_admin(telegram_id=message.chat.id, username=message.text)
+    await state.set_state(default_state)
 
 
 @router.message(or_f(F.text == '>>>', F.text == '<<<'), lambda message: check_command_for_admins(message))
