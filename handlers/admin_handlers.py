@@ -16,7 +16,8 @@ from module.data_base import check_command_for_admins, table_users, add_token, t
     get_list_users, get_user, delete_user, get_list_admins, get_list_notadmins, set_admins, set_notadmins,\
     table_services, add_services, get_list_services, delete_services, update_service, get_cost_service, table_orders,\
     add_orders, get_row_services, get_id_last_orders, update_list_sendlers, add_super_admin, add_channel, add_group, \
-    get_list_users_notadmin, table_statistic, select_alldata_statistic, delete_statistic, set_busy_id
+    get_list_users_notadmin, table_statistic, select_alldata_statistic, delete_statistic, set_busy_id, \
+    update_username_admin, get_row_orders_id, delete_orders
 import requests
 
 
@@ -29,6 +30,7 @@ table_users()
 
 
 class Stage(StatesGroup):
+    get_name = State()
     channel = State()
     group = State()
     title_services = State()
@@ -59,10 +61,19 @@ async def process_start_command(message: Message, state: FSMContext) -> None:
     if str(message.chat.id) != str(config.tg_bot.admin_ids):
         await message.answer(text=MESSAGE_TEXT['admin'],
                              reply_markup=keyboards_admin_one())
+        await message.answer(text='Отправьте мне ваше имя:')
+        await state.set_state(Stage.get_name)
     else:
         add_super_admin(config.tg_bot.admin_ids, f'superadmin_@{message.from_user.username}')
         await message.answer(text=MESSAGE_TEXT['superadmin'],
                              reply_markup=keyboards_superadmin_one())
+        await message.answer(text='Отправьте мне ваше имя:')
+        await state.set_state(Stage.get_name)
+
+
+@router.message(F.text, lambda message: check_command_for_admins(message), StateFilter(Stage.get_name))
+async def process_start_command(message: Message, state: FSMContext) -> None:
+    update_username_admin(telegram_id=message.chat.id, username=message.text)
 
 
 @router.message(or_f(F.text == '>>>', F.text == '<<<'), lambda message: check_command_for_admins(message))
@@ -531,9 +542,9 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
     id_orders = get_id_last_orders()
 
     list_sendler = get_list_users()
-    print(list_sendler)
-    list_sendler = get_list_users_notadmin()
-    print(list_sendler)
+    # print(list_sendler)
+    # list_sendler = get_list_users_notadmin()
+    # print(list_sendler)
     list_mailing = []
     for row in list_sendler:
         # print(row[0], config.tg_bot.admin_ids)
@@ -566,6 +577,7 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
     #                        reply_markup=keyboard_ready_player(id_order=id_orders[0]))
     # iduser_idmessage = f'{config.tg_bot.admin_ids}_{msg.message_id}'
     # list_mailing.append(iduser_idmessage)
+    await callback.message.edit_reply_markup(reply_markup=keyboard_finish_orders_one_press_del(id_orders[0]))
     await callback.message.answer(text=f'Заказ № {id_orders[0]} успешно отправлен!')
     list_mailing_str = ','.join(list_mailing)
     update_list_sendlers(list_mailing_str=list_mailing_str, id_orders=id_orders[0])
@@ -581,6 +593,32 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
 
     await state.set_state(default_state)
 
+
+@router.callback_query(F.data.startswith('deleteorder_'))
+async def process_delete_order(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    logging.info(f'process_delete_order: {callback.message.chat.id}')
+    id_order = callback.data.split('_')[1]
+    info_order = get_row_orders_id(id_order=int(id_order))
+    print(info_order)
+    list_player = info_order[0][5].split(',')
+    list_sendler = info_order[0][6].split(',')
+    for player in list_player:
+        try:
+            await bot.delete_message(chat_id=int(player.split('.')[1]),
+                                     message_id=int(player.split('.')[2]))
+            set_busy_id(busy=0, telegram_id=int(player.split('.')[1]))
+        except:
+            await callback.message.answer(text=f'При удалении заказа № {id_order} у пользователя {player}'
+                                               f' возникла ошибка')
+    for sendler in list_sendler:
+        try:
+            await bot.delete_message(chat_id=int(sendler.split('_')[0]),
+                                     message_id=int(sendler.split('_')[1]))
+        except:
+            await callback.message.answer(text=f'При удалении заказа № {id_order} у пользователя {sendler}'
+                                               f' возникла ошибка')
+    delete_orders(id_orders=int(id_order))
+    await callback.message.answer(text=f'Заказ {id_order} удален!')
 
 # ПОЛЬЗОВАТЕЛЬ
 @router.message(F.text == 'Пользователь', lambda message: check_command_for_admins(message))

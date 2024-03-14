@@ -171,7 +171,7 @@ def add_token(token_new) -> None:
     db.commit()
 
 
-# ПОЛЬЗОВАТЕЛЬ - добавления сгенерированного токена
+# ПОЛЬЗОВАТЕЛЬ - добавления супер-админа
 def add_super_admin(id_admin, user) -> None:
     logging.info(f'add_super_admin')
     sql.execute('SELECT telegram_id FROM users')
@@ -181,6 +181,13 @@ def add_super_admin(id_admin, user) -> None:
         sql.execute(f'INSERT INTO users (token_auth, telegram_id, username, is_admin, is_busy) '
                     f'VALUES ("SUPERADMIN", {id_admin}, "{user}", 1, 0)')
         db.commit()
+
+
+# ПОЛЬЗОВАТЕЛЬ - изменение username
+def update_username_admin(telegram_id, username) -> None:
+    logging.info(f'update_username_admin')
+    sql.execute('UPDATE users SET username = ? WHERE telegram_id = ?', (username, telegram_id))
+    db.commit()
 
 
 # ПРИВЯЗАТЬ - правка канала
@@ -228,11 +235,14 @@ def get_list_users() -> list:
     sql.execute('SELECT telegram_id, username FROM users WHERE NOT username = ?', ('username',))
     list_username = [row for row in sql.fetchall()]
     return list_username
+
+
 def get_list_users_notadmin() -> list:
     logging.info(f'get_list_users_notadmin')
     sql.execute('SELECT telegram_id, username FROM users WHERE NOT username = ? AND is_admin = ?', ('username', 0))
     list_username = [row for row in sql.fetchall()]
     return list_username
+
 
 # ПОЛЬЗОВАТЕЛЬ - список админов
 def get_list_admin() -> list:
@@ -325,6 +335,10 @@ def get_id_last_orders() -> int:
     else:
         return 0
 
+def delete_orders(id_orders):
+    logging.info(f'delete_orders')
+    sql.execute('DELETE FROM orders WHERE id = ?', (id_orders,))
+    db.commit()
 
 # ЗАКАЗЫ - обновление списка исполнителей
 def update_list_players(players, id_orders):

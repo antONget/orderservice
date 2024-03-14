@@ -100,6 +100,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
         await callback.answer(text='Вы не можете брать другие заказы, пока не будет получен отчет!',
                               show_alert=True)
     else:
+        print(user_dict1)
         user_dict1[callback.message.chat.id] = await state.get_data()
         ready_order = f"{callback.message.chat.id}.{callback.data.split('_')[2]}"
         if 'ready_order' not in user_dict1[callback.message.chat.id] or user_dict1[callback.message.chat.id]['ready_order'] != ready_order:
@@ -144,8 +145,9 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                             for admin in list_admin:
                                 result = get_telegram_user(user_id=admin[0], bot_token=config.tg_bot.token)
                                 if 'result' in result:
+                                    username_ = get_user(telegram_id=callback.message.chat.id)
                                     await bot.send_message(chat_id=admin[0],
-                                                           text=f'Пользователь @{callback.from_user.username} взял заказ'
+                                                           text=f'Пользователь @{username_[0]} взял заказ'
                                                                 f' №{id_order} вместо @{get_user(int(change_list[ii].split(".")[0]))[0]}')
                             # изменяем значение
                             change_list[ii] = f'{change_list[ii].split(".")[0]}.1'
@@ -180,7 +182,8 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                             list_sendler.remove(telegram_id_message)
                     # добавляем пользователя в список исполнителей
                     print(f'{callback.from_user.username}.{callback.message.chat.id}.{message_del}')
-                    players.append(f'{callback.from_user.username}.{callback.message.chat.id}.{message_del}')
+                    username_ = get_user(telegram_id=callback.message.chat.id)
+                    players.append(f'{username_[0]}.{callback.message.chat.id}.{message_del}')
                     # объединяем в строку пользователей согласившихся выполнять заказ
                     new_players = ','.join(players)
                     list_mailing_str = ','.join(list_sendler)
