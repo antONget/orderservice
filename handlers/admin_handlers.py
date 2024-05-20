@@ -492,7 +492,8 @@ async def process_continue_orders(callback: CallbackQuery, state: FSMContext) ->
 #                                   reply_markup=keyboard_finish_orders())
 
 
-@router.message(F.text, StateFilter(Stage.set_comment_service))
+@router.message(lambda message: message.text not in ['Услуга', 'Статистика', 'Скинуть занятость', '>>>', 'Администраторы',
+                                                'Пользователь', 'Прикрепить', 'Сброс статистики', '<<<'], StateFilter(Stage.set_comment_service))
 async def process_set_comment_service(message: Message, state: FSMContext) -> None:
     logging.info(f'process_set_comment_service: {message.chat.id}')
     await state.update_data(select_comment_service=message.text)
@@ -522,7 +523,7 @@ async def process_set_comment_service(message: Message, state: FSMContext) -> No
                                            f'Опубликовать?',
                                    reply_markup=keyboard_finish_orders(),
                                    parse_mode='html')
-
+    await state.set_state(default_state)
 
 @router.callback_query(F.data == 'cancel_orders')
 async def process_cancel_odrers(callback: CallbackQuery, state: FSMContext) -> None:
