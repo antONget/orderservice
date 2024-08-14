@@ -1,4 +1,4 @@
-from aiogram import Router, F
+from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
@@ -27,17 +27,23 @@ async def process_change_list_admins(message: Message) -> None:
 
 # добавление администратора
 @router.callback_query(F.data == 'add_admin')
-async def process_add_admin(callback: CallbackQuery) -> None:
+async def process_add_admin(callback: CallbackQuery, bot: Bot) -> None:
     """
     Список пользователей для назначения их администраторами
     :param callback:
+    :param bot:
     :return:
     """
     logging.info(f'process_add_admin: {callback.message.chat.id}')
     list_not_admin = [user for user in await rq.get_list_admins(is_admin=rq.UserRole.user)]
+    if not list_not_admin:
+        await bot.delete_message(chat_id=callback.message.chat.id,
+                                 message_id=callback.message.message_id)
+        await callback.answer(text='Нет пользователей для назначения их администраторами', show_alert=True)
+        return
     keyboard = kb.keyboards_add_admin(list_not_admin=list_not_admin, back=0, forward=2, count=6)
-    await callback.message.answer(text='Выберите пользователя, которого нужно назначить администратором',
-                                  reply_markup=keyboard)
+    await callback.message.edit_text(text='Выберите пользователя, которого нужно назначить администратором',
+                                     reply_markup=keyboard)
     await callback.answer()
 
 
@@ -98,8 +104,8 @@ async def process_adminadd(callback: CallbackQuery, state: FSMContext) -> None:
     telegram_id = int(callback.data.split('_')[1])
     user_info = await rq.get_user_tg_id(tg_id=telegram_id)
     await state.update_data(add_admin_telegram_id=telegram_id)
-    await callback.message.answer(text=f'Назначить пользователя {user_info.username} администратором',
-                                  reply_markup=kb.keyboard_add_list_admins())
+    await callback.message.edit_text(text=f'Назначить пользователя {user_info.username} администратором',
+                                     reply_markup=kb.keyboard_add_list_admins())
     await callback.answer()
 
 
@@ -130,14 +136,14 @@ async def process_add_admin_list(callback: CallbackQuery, state: FSMContext) -> 
     data = await state.get_data()
     user_info = await rq.get_user_tg_id(data["add_admin_telegram_id"])
     await rq.set_role_user(int(data["add_admin_telegram_id"]), is_admin=1)
-    await callback.message.answer(text=f'Пользователь {user_info.username} успешно назначен администратором')
+    await callback.message.edit_text(text=f'Пользователь {user_info.username} успешно назначен администратором')
     await asyncio.sleep(3)
     await process_change_list_admins(callback.message)
 
 
 # разжалование администратора
 @router.callback_query(F.data == 'delete_admin')
-async def process_del_admin(callback: CallbackQuery) -> None:
+async def process_del_admin(callback: CallbackQuery, bot: Bot) -> None:
     """
     Список пользователей для их разжалования
     :param callback:
@@ -145,9 +151,13 @@ async def process_del_admin(callback: CallbackQuery) -> None:
     """
     logging.info(f'process_del_admin: {callback.message.chat.id}')
     list_admin = [user for user in await rq.get_list_admins(is_admin=rq.UserRole.admin)]
+    if not list_admin:
+        await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
+        await callback.answer(text='Нет администраторов для разжалования', show_alert=True)
+        return
     keyboard = kb.keyboards_del_admin(list_admin=list_admin, back=0, forward=2, count=6)
-    await callback.message.answer(text='Выберите пользователя, которого нужно разжаловать',
-                                  reply_markup=keyboard)
+    await callback.message.edit_text(text='Выберите пользователя, которого нужно разжаловать',
+                                     reply_markup=keyboard)
     await callback.answer()
 
 

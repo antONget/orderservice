@@ -25,9 +25,10 @@ class Statistic(Base):
     __tablename__ = 'statistics'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    cost_services: Mapped[int] = mapped_column(Integer)
-    count_people: Mapped[int] = mapped_column(Integer)
-    players: Mapped[str] = mapped_column(String(200))
+    tg_id: Mapped[int] = mapped_column(Integer)
+    cost_order: Mapped[int] = mapped_column(Integer)
+    order_id: Mapped[int] = mapped_column(Integer)
+
 
 
 class Service(Base):
@@ -44,14 +45,24 @@ class Order(Base):
     __tablename__ = 'orders'
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    service_id: Mapped[int] = mapped_column(Integer)
     title_services: Mapped[str] = mapped_column(String(20))
     cost_services: Mapped[int] = mapped_column(Integer)
     comment: Mapped[str] = mapped_column(String(200))
     count_people: Mapped[int] = mapped_column(Integer)
-    players: Mapped[str] = mapped_column(String(200), default='players')
-    sandler: Mapped[str] = mapped_column(String(200), default='sendler')
-    change: Mapped[str] = mapped_column(String(200), default='change')
     report: Mapped[str] = mapped_column(String(200), default='report')
+
+
+class Executor(Base):
+    __tablename__ = 'executor'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tg_id: Mapped[int] = mapped_column(Integer)
+    id_order: Mapped[int] = mapped_column(Integer)
+    cost_order: Mapped[int] = mapped_column(Integer)
+    status_executor: Mapped[str] = mapped_column(String(20))
+    message_id: Mapped[int] = mapped_column(Integer)
+    change_id: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class Channel(Base):

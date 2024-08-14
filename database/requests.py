@@ -1,8 +1,11 @@
-from database.models import User, Order, Statistic, Channel, Service
+from database.models import User, Order, Statistic, Channel, Service, Executor
 from database.models import async_session
 from sqlalchemy import select, update, delete
 from dataclasses import dataclass
 import logging
+
+
+"""USER"""
 
 
 @dataclass
@@ -19,7 +22,7 @@ async def add_super_admin(data: dict):
     """
     logging.info(f'add_super_admin')
     async with async_session() as session:
-        user = await session.scalar(select(User).where(User.telegram_id == data["telegram_id"]))
+        user = await session.scalar(select(User).where(User.telegram_id == int(data["telegram_id"])))
         if not user:
             session.add(User(**data))
             await session.commit()
@@ -53,7 +56,7 @@ async def add_user(telegram_id: int, username: str, token: str):
         await session.commit()
 
 
-async def get_all_users():
+async def get_all_users() -> User:
     """
     Получаем список всех пользователей зарегистрированных в боте
     :return:
@@ -64,7 +67,18 @@ async def get_all_users():
         return users
 
 
-async def get_user_tg_id(tg_id: int):
+async def get_all_users_not_admin():
+    """
+    Получаем список всех пользователей зарегистрированных в боте
+    :return:
+    """
+    logging.info(f'get_all_users')
+    async with async_session() as session:
+        users = await session.scalars(select(User).where(User.telegram_id != 0, User.is_admin == 0))
+        return users
+
+
+async def get_user_tg_id(tg_id: int) -> User:
     """
     Получаем информацию по пользователю
     :param tg_id:
@@ -76,7 +90,7 @@ async def get_user_tg_id(tg_id: int):
         return user
 
 
-async def get_list_admins(is_admin: 0):
+async def get_list_admins(is_admin: int) -> User:
     """
     Получаем список администраторов/не администраторов
     :param is_admin:
@@ -151,7 +165,7 @@ async def check_token(token: str):
     """
     logging.info(f'check_token')
     async with async_session() as session:
-        return await session.scalar(select(User).where(User.token_auth == token))
+        return await session.scalar(select(User).where(User.token_auth == token, User.telegram_id == 0))
 
 
 async def delete_user(tg_id: int):
@@ -167,6 +181,21 @@ async def delete_user(tg_id: int):
         await session.commit()
 
 
+"""STATISTIC"""
+
+
+async def add_statistic(data: dict):
+    """
+    Добавление статистики
+    :param data:
+    :return:
+    """
+    logging.info(f'add_static')
+    async with async_session() as session:
+        session.add(Statistic(**data))
+        await session.commit()
+
+
 async def select_all_data_statistic():
     """
     Получаем записи из таблицы "Статистика"
@@ -175,6 +204,17 @@ async def select_all_data_statistic():
     logging.info('select_alldata_statistic')
     async with async_session() as session:
         return await session.scalars(select(Statistic))
+
+
+async def get_statistic_tg_id(tg_id: int) -> Statistic:
+    """
+    Получаем записи из таблицы "Статистика" для пользователя по его id
+    :param tg_id:
+    :return:
+    """
+    logging.info('select_alldata_statistic')
+    async with async_session() as session:
+        return await session.scalars(select(Statistic).where(Statistic.tg_id == tg_id))
 
 
 async def check_statistic():
@@ -194,23 +234,40 @@ async def delete_statistic():
     """
     logging.info('delete_statistic')
     async with async_session() as session:
-        statistics = await session.scalar(select(Statistic))
-        await session.delete(statistics)
+        statistics = await session.scalars(select(Statistic))
+        for statistic in statistics:
+            await session.delete(statistic)
         await session.commit()
+
+
+"""CHANNEL"""
 
 
 async def add_resource(data: dict):
     """
-    Обновление канала/группы
+    Добавление канала/группы
     :param data:
     :return:
     """
-    logging.info(f'set_username_admin')
+    logging.info(f'add_resource')
     async with async_session() as session:
         channel = await session.scalar(select(Channel).where(Channel.channel_id == data["channel_id"]))
         if not channel:
             session.add(Channel(**data))
-        await session.commit()
+            await session.commit()
+
+
+async def get_channels() -> Channel:
+    """
+    Получаем ресурсы для публикации
+    :return:
+    """
+    logging.info(f'get_channels')
+    async with async_session() as session:
+        return await session.scalars(select(Channel))
+
+
+"""SERVICE"""
 
 
 async def add_service(data: dict):
@@ -275,6 +332,9 @@ async def update_service_id(service_id: int, title_service: str, cost_service: i
         await session.commit()
 
 
+"""ORDER"""
+
+
 async def add_order(data: dict):
     """
     Добавление в базу заказа
@@ -287,7 +347,7 @@ async def add_order(data: dict):
         await session.commit()
 
 
-async def get_orders() -> list:
+async def get_orders() -> Order:
     """
     Получаем заказы
     :return:
@@ -297,28 +357,30 @@ async def get_orders() -> list:
         return await session.scalars(select(Order))
 
 
-async def update_list_sandler(list_mailing_str: str, id_order: int):
-    """
-    Обновляем список рассылки для заказа
-    :param list_mailing_str:
-    :param id_order:
-    :return:
-    """
-    logging.info(f'update_list_sendlers')
-    async with async_session() as session:
-        order = await session.scalar(select(Order).where(Order.id == id_order))
-        order.sandler = list_mailing_str
-        await session.commit()
-
-
-async def get_orders_id(order_id: int) -> Order:
+async def get_order_id(order_id: int) -> Order:
     """
     Получаем заказ по его id
+    :param order_id:
     :return:
     """
     logging.info(f'get_orders_id')
     async with async_session() as session:
-        return await session.scalars(select(Order).where(Order.id == order_id))
+        return await session.scalar(select(Order).where(Order.id == order_id))
+
+
+async def set_order_report(order_id: int, report: str) -> None:
+    """
+    Обновляем отчет заказа
+    :param order_id:
+    :param report:
+    :return:
+    """
+    logging.info(f'set_order_report')
+    async with async_session() as session:
+        order = await session.scalar(select(Order).where(Order.id == order_id))
+        if order:
+            order.report = report
+            await session.commit()
 
 
 async def delete_order(order_id: int):
@@ -332,3 +394,122 @@ async def delete_order(order_id: int):
         order = await session.scalar(select(Order).where(Order.id == order_id))
         await session.delete(order)
         await session.commit()
+
+
+"""EXECUTOR"""
+
+
+@dataclass
+class ExecutorStatus:
+    none = "none"
+    done = "done"
+    change = "change"
+    cancel = "cancel"
+    complete = "complete"
+
+
+async def add_executor(data: dict) -> None:
+    """
+    Добавление потенциального исполнителя заказа в БД
+    :param data:
+    :return:
+    """
+    logging.info(f'add_order')
+    async with async_session() as session:
+        session.add(Executor(**data))
+        await session.commit()
+
+
+async def get_executors_order_id(order_id: int) -> Executor:
+    """
+    Получаем список исполнителей кому был разослан заказ {order_id}
+    :param order_id:
+    :return:
+    """
+    logging.info(f'get_executors_order_id')
+    async with async_session() as session:
+        return await session.scalars(select(Executor).where(Executor.id_order == order_id))
+
+
+async def get_executor_tg_id_order_id(order_id: int, tg_id: int) -> Executor:
+    """
+    Получаем информацию по исполнителю заказа {order_id} по его id телеграм {tg_id}
+    :param order_id:
+    :param tg_id:
+    :return:
+    """
+    logging.info(f'get_executors_order_id')
+    async with async_session() as session:
+        return await session.scalar(select(Executor).where(Executor.id_order == order_id, Executor.tg_id == tg_id))
+
+
+async def get_executors_status_order_id(order_id: int, status: str) -> Executor:
+    """
+    Получаем информацию по исполнителям заказа {order_id} по их статусу
+    :param order_id:
+    :param status:
+    :return:
+    """
+    logging.info(f'get_executors_order_id')
+    async with async_session() as session:
+        return await session.scalars(select(Executor).where(Executor.id_order == order_id,
+                                                            Executor.status_executor == status))
+
+
+async def set_executors_status_tg_id_order_id(order_id: int, tg_id: int, status: str) -> None:
+    """
+    Обновляем статус заказа {order_id} на {status} у пользователя по его id телеграм {tg_id}
+    :param order_id:
+    :param tg_id:
+    :param status:
+    :return:
+    """
+    logging.info(f'get_executors_order_id {order_id} {tg_id} {status}')
+    async with async_session() as session:
+        executor = await session.scalar(select(Executor).where(Executor.id_order == order_id, Executor.tg_id == tg_id))
+        if executor:
+            executor.status_executor = status
+            await session.commit()
+
+
+async def get_executor_tg_id_status(tg_id: int, status: str) -> Executor:
+    """
+    Получаем заказ пользователя по его id телеграм {tg_id} с заданным статусом заказа {status}
+    :param tg_id:
+    :param status:
+    :return:
+    """
+    logging.info(f'get_orders_id')
+    async with async_session() as session:
+        return await session.scalar(select(Executor).where(Executor.tg_id == tg_id, Executor.status_executor == status))
+
+
+async def set_executors_change_tg_id_order_id(order_id: int, tg_id: int, change_id: int) -> None:
+    """
+    Обновляем замену в заказе {order_id} у пользователя по его id телеграм {change_id}
+    :param order_id:
+    :param tg_id:
+    :param change_id:
+    :return:
+    """
+    logging.info(f'get_executors_order_id {order_id} {tg_id}')
+    async with async_session() as session:
+        executor = await session.scalar(select(Executor).where(Executor.id_order == order_id, Executor.tg_id == tg_id))
+        if executor:
+            executor.change_id = change_id
+            await session.commit()
+
+
+async def delete_executor(tg_id: int, order_id: int):
+    """
+    Удаление исполнителя по id
+    :param tg_id:
+    :param order_id:
+    :return:
+    """
+    logging.info(f'delete_executor')
+    async with async_session() as session:
+        executor = await session.scalar(select(Executor).where(Executor.tg_id == tg_id, Executor.id_order == order_id))
+        if executor:
+            await session.delete(executor)
+            await session.commit()

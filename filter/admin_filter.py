@@ -1,5 +1,5 @@
 from aiogram.filters import BaseFilter
-from aiogram.types import  Message
+from aiogram.types import Message
 from config_data.config import load_config, Config
 import database.requests as rq
 import logging

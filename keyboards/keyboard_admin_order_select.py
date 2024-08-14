@@ -59,7 +59,7 @@ def keyboard_continue_orders() -> InlineKeyboardMarkup:
     button_1 = InlineKeyboardButton(text='Далее',
                                     callback_data='continue_orders')
     button_2 = InlineKeyboardButton(text='Назад',
-                                    callback_data='back_odrers')
+                                    callback_data='order_back')
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_1, button_2]],)
     return keyboard
 
@@ -90,7 +90,7 @@ def keyboard_finish_orders() -> InlineKeyboardMarkup:
     return keyboard
 
 
-def keyboard_finish_orders_one_press() -> None:
+def keyboard_finish_orders_one_press() -> InlineKeyboardMarkup:
     """
     Клавиатура для замены (обеспечивает однократное нажатие на кнопку "Отправить" - подменяет колбеки)
     :return:
@@ -121,14 +121,14 @@ def keyboard_finish_orders_one_press_del(id_order) -> InlineKeyboardMarkup:
     Клавиатура добавляет кнопку удалить
     :return:
     """
-    button_1 = InlineKeyboardButton(text='Отпрaвить',
-                                    callback_data=' ')
-    button_2 = InlineKeyboardButton(text='Отмeна',
-                                    callback_data=' ')
+    # button_1 = InlineKeyboardButton(text='Отпрaвить',
+    #                                 callback_data=' ')
+    # button_2 = InlineKeyboardButton(text='Отмeна',
+    #                                 callback_data=' ')
     button_3 = InlineKeyboardButton(text='Удалить',
                                     callback_data=f'deleteorder_{id_order}')
     keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[button_1, button_2], [button_3]],
+        inline_keyboard=[[button_3]],
     )
     return keyboard
 

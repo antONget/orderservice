@@ -1,4 +1,4 @@
-from aiogram import Router, F
+from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State, default_state
@@ -35,15 +35,22 @@ async def process_change_list_services(message: Message) -> None:
 
 # УСЛУГА -> Редактировать -> [Добавить][Изменить]
 @router.callback_query(F.data == 'edit_services')
-async def process_edit_list_services(callback: CallbackQuery) -> None:
+async def process_edit_list_services(callback: CallbackQuery, bot: Bot) -> None:
     """
     Действие с услугой при ее Редактировании -> Добавить/Изменить
     :param callback:
+    :param bot:
     :return:
     """
     logging.info(f'process_edit_list_services: {callback.message.chat.id}')
-    await callback.message.answer(text='Вы можете добавить услугу в базу или изменить уже созданные!',
-                                  reply_markup=kb.keyboard_edit_services())
+    try:
+        await callback.message.edit_text(text='Вы можете добавить услугу в базу или изменить уже созданные!',
+                                         reply_markup=kb.keyboard_edit_services())
+    except:
+        await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
+        await callback.message.answer(text='Вы можете добавить услугу в базу или изменить уже созданные!',
+                                      reply_markup=kb.keyboard_edit_services())
+    await callback.answer()
 
 
 # УСЛУГА -> Редактировать -> Добавить - ввод названия услуги
@@ -56,8 +63,10 @@ async def process_append_services(callback: CallbackQuery, state: FSMContext) ->
     :return:
     """
     logging.info(f'process_append_services: {callback.message.chat.id}')
-    await callback.message.answer(text='Введите название услуги!')
+    await callback.message.edit_text(text='Введите название услуги!',
+                                     reply_markup=None)
     await state.set_state(Order.title_services)
+    await callback.answer()
 
 
 # УСЛУГА -> Редактировать -> Добавить - Запрашиваем стоимость услуги
@@ -162,10 +171,13 @@ async def process_pass_picture_services(callback: CallbackQuery, state: FSMConte
                                        f'<i>Количество исполнителей:</i> {data["count_services"]}\n',
                                   reply_markup=kb.keyboard_confirmation_append_services())
     await state.set_state(default_state)
+    await callback.answer()
 
 
 # завершаем добавление услуг
 @router.callback_query(F.data == 'finish_services')
-async def process_finish_append_services(callback: CallbackQuery) -> None:
+async def process_finish_append_services(callback: CallbackQuery, bot: Bot) -> None:
     logging.info(f'process_finish_append_services: {callback.message.chat.id}')
+    await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
+    await callback.answer()
     await process_change_list_services(callback.message)

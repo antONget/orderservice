@@ -34,8 +34,9 @@ async def process_change_services(callback: CallbackQuery) -> None:
     forward = 2
     count_item = 6
     keyboard = kb.keyboards_edit_services(list_services=list_services, back=back, forward=forward, count=count_item)
-    await callback.message.answer(text='Выберите услугу из базы',
-                                  reply_markup=keyboard)
+    await callback.message.edit_text(text='Выберите услугу из базы',
+                                     reply_markup=keyboard)
+    await callback.answer()
 
 
 # >>>>
@@ -58,6 +59,7 @@ async def process_serviceseditforward(callback: CallbackQuery) -> None:
     except:
         await callback.message.edit_text(text='Выберите услугу из базы.',
                                          reply_markup=keyboard)
+    await callback.answer()
 
 
 # <<<<
@@ -80,6 +82,7 @@ async def process_serviceseditback(callback: CallbackQuery) -> None:
     except:
         await callback.message.edit_text(text='Выберите услугу из базы.',
                                          reply_markup=keyboard)
+    await callback.answer()
 
 
 # удаление или модификация выбранной услуги
@@ -95,8 +98,9 @@ async def process_servicesedit(callback: CallbackQuery, state: FSMContext) -> No
     service_id = int(callback.data.split('_')[1])
     await state.update_data(service_id=service_id)
     service_info = await rq.get_service_id(service_id=service_id)
-    await callback.message.answer(text=f'Что нужно сделать с услугой <b>{service_info.title_services}</b>',
-                                  reply_markup=kb.keyboard_edit_list_services())
+    await callback.message.edit_text(text=f'Что нужно сделать с услугой <b>{service_info.title_services}</b>',
+                                     reply_markup=kb.keyboard_edit_list_services())
+    await callback.answer()
 
 
 # УСЛУГА - удаление услуги
@@ -105,10 +109,12 @@ async def process_delete_services(callback: CallbackQuery, state: FSMContext) ->
     logging.info(f'process_delete_services: {callback.message.chat.id}')
     data = await state.get_data()
     service_id = data['service_id']
-    await rq.delete_service(service_id=service_id)
     service_info = await rq.get_service_id(service_id=service_id)
-    await callback.message.answer(text=f'Услуга <b>{service_info.title_services}</b>'
-                                       f' успешно удалена')
+    await rq.delete_service(service_id=service_id)
+    await callback.message.edit_text(text=f'Услуга <b>{service_info.title_services}</b>'
+                                          f' успешно удалена',
+                                     reply_markup=None)
+    await callback.answer()
     await process_change_list_services(callback.message)
 
 

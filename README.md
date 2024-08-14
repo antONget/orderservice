@@ -35,7 +35,7 @@ ADMIN_IDS="telegram_id manager(or admin), who will receive messages with orders"
 ```
 ### Запустите бота
 ```bash 
-python3 boiko_bot.py 
+python3 boikov_bot.py 
 ```
 
 ### PM2
@@ -51,7 +51,7 @@ npm install pm2 -g
 ```
 Для запуска бота перейдите в директорию с ботом и запустите его командой:
 ```bash 
-pm2 start boiko_bot.py --interpreter=python3
+pm2 start boikov_bot.py --interpreter=python3
 ```
 # Инструкция по работе с телеграмм-ботом
 Телеграмм бот выполнен по техническому заданию согласованного с заказчиком.

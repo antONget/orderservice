@@ -45,8 +45,10 @@ async def process_change_channel(message: Message) -> None:
 @router.callback_query(F.data == 'add_channel')
 async def process_add_channel(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'process_add_channel: {callback.message.chat.id}')
-    await callback.message.answer(text='Пришлите id канал!')
+    await callback.message.edit_text(text='Пришлите id канал!',
+                                     reply_markup=None)
     await state.set_state(Channel.id_channel)
+    await callback.answer()
 
 
 # Прикрепить - Канал - добавление/замена канала в базе
@@ -56,13 +58,14 @@ async def process_change_list_users(message: Message, state: FSMContext) -> None
     try:
         channel_id = int(message.text)
     except:
-        await message.answer(text='Пришлите id канала')
+        await message.answer(text='Пришлите id канала. ID должно быть целым числом')
         return
     channel = get_telegram_user(channel_id, config.tg_bot.token)
     if 'result' in channel:
         data = {"channel_id": channel_id, "type": 'channel'}
         await rq.add_resource(data=data)
-        await message.answer(text=f'Вы установили канал id={message.text} для получения отчетов!')
+        await message.answer(text=f'Вы установили канал\n @{channel["result"]["title"]}\n id={message.text}'
+                                  f' для получения отчетов!')
     else:
         await message.answer(text=f'Канал id={message.text} не корректен, или бот не является администратором!')
     await state.set_state(default_state)
@@ -72,8 +75,10 @@ async def process_change_list_users(message: Message, state: FSMContext) -> None
 @router.callback_query(F.data == 'add_group')
 async def process_add_group(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'add_group: {callback.message.chat.id}')
-    await callback.message.answer(text='Пришлите id беседы!')
+    await callback.message.edit_text(text='Пришлите id беседы!',
+                                     reply_markup=None)
     await state.set_state(Channel.id_group)
+    await callback.answer()
 
 
 # Прикрепить - Канал - добавление/замена канала в базе
@@ -83,13 +88,14 @@ async def process_change_list_group(message: Message, state: FSMContext) -> None
     try:
         channel_id = int(message.text)
     except:
-        await message.answer(text='Пришлите id канала')
+        await message.answer(text='Пришлите id канала.  ID должно быть целым числом')
         return
     channel = get_telegram_user(channel_id, config.tg_bot.token)
     if 'result' in channel:
         data = {"channel_id": int(message.text), "type": 'group'}
         await rq.add_resource(data=data)
-        await message.answer(text=f'Вы установили беседу id={message.text} для получения отчетов!')
+        await message.answer(text=f'Вы установили беседу\n @{channel["result"]["title"]}\n id={message.text}'
+                                  f' для получения отчетов!')
     else:
         await message.answer(text=f'Канал/чат id={message.text} не корректен, или бот не является администратором!')
     await state.set_state(default_state)
