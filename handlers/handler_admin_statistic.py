@@ -19,20 +19,19 @@ async def process_get_balans_admin(message: Message) -> None:
     logging.info(f'process_get_balans_admin: {message.chat.id}')
     list_orders = await rq.select_all_data_statistic()
 
-    # list_statistics: [id, cost, count, player[@username.telegram_id]]
+    # list_statistics: [id, tg_id, cost_order, order_id]
     if list_orders:
         total = {}
         for order in list_orders:
-            list_player = order.players.split(',')
-            for player in list_player:
-                if player.split('.')[0] in total:
-                    total[player.split('.')[0]] += order.cost_services
-                else:
-                    total[player.split('.')[0]] = order.cost_services
+            if order.tg_id in total:
+                total[order.tg_id] += order.cost_order
+            else:
+                total[order.tg_id] = order.cost_order
         statistika = ''
         balance = 0
         for key, value in total.items():
-            statistika += f'@{key}: {value} руб.\n'
+            user = await rq.get_user_tg_id(tg_id=key)
+            statistika += f'@{user.username}: {value} руб.\n'
             balance += value
         await message.answer(text=f'<b>Статистика</b>:\n\n'
                                   f'{statistika}'
