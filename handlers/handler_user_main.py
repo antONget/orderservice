@@ -131,7 +131,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                                                                          status=rq.ExecutorStatus.change)
                     for change_executor in change_list:
                         if change_executor.change_id == 0:
-                            change_user = await rq.get_user_tg_id(change_executor.telegram_id)
+                            change_user = await rq.get_user_tg_id(change_executor.tg_id)
                             # список админов
                             list_admin = await rq.get_list_admins(is_admin=1)
                             # информируем админов о произведенной замене
@@ -142,7 +142,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                                                            text=f'Пользователь @{user_info.username} взял заказ'
                                                                 f' №{order_info.id} вместо @{change_user.username}')
                             await rq.set_executors_change_tg_id_order_id(order_id=order_id,
-                                                                         tg_id=change_executor.telegram_id,
+                                                                         tg_id=change_executor.tg_id,
                                                                          change_id=callback.message.chat.id)
                             # прерываем цикл так производим одну замену
                             break
