@@ -34,8 +34,8 @@ def get_telegram_user(user_id: int, bot_token: str):
 
 
 # запуск бота пользователем /start
-@router.message.filter(F.chat.type == "private")
-@router.message(CommandStart())
+
+@router.message(CommandStart(), F.chat.type == "private")
 async def process_start_command_user(message: Message, state: FSMContext) -> None:
     """
     Нажатие или ввод команды /start пользователем не являющимся админом
