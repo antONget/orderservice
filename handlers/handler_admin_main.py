@@ -88,7 +88,7 @@ async def process_change_keyboard(message: Message) -> None:
             await message.answer(text='Вы super admin проекта',
                                  reply_markup=kb.keyboards_superadmin_two())
     if message.text == '<<<':
-        if await check_super_admin(telegram_id=message.chat.id):
+        if not await check_super_admin(telegram_id=message.chat.id):
             await message.answer(text='Вы admin проекта',
                                  reply_markup=kb.keyboards_admin_one())
         else:
