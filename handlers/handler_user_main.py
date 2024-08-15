@@ -34,6 +34,7 @@ def get_telegram_user(user_id: int, bot_token: str):
 
 
 # запуск бота пользователем /start
+@router.message.filter(F.chat.type == "private")
 @router.message(CommandStart())
 async def process_start_command_user(message: Message, state: FSMContext) -> None:
     """
@@ -63,7 +64,11 @@ async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
     """
     logging.info(f'get_token_user: {message.chat.id}')
     if await rq.check_token(token=message.text):
-        await rq.add_user(telegram_id=message.chat.id, username=message.from_user.username, token=message.text)
+        if message.from_user.username:
+            username = message.from_user.username
+        else:
+            username = 'None'
+        await rq.add_user(telegram_id=message.chat.id, username=username, token=message.text)
         await message.answer(text='Вы добавлены',
                              reply_markup=kb.keyboards_main_user())
         list_admin = await rq.get_list_admins(is_admin=1)

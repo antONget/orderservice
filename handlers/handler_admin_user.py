@@ -96,9 +96,13 @@ async def process_back(callback: CallbackQuery) -> None:
 async def process_deleteuser(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'process_deleteuser: {callback.message.chat.id}')
     telegram_id = int(callback.data.split('_')[1])
-    user_info = await rq.get_user_tg_id(tg_id=callback.message.chat.id)
+    user_info = await rq.get_user_tg_id(tg_id=telegram_id)
     await state.update_data(del_telegram_id=telegram_id)
-    await callback.message.edit_text(text=f'Удалить пользователя {user_info.username}',
+    if user_info:
+        username = user_info.username
+    else:
+        username = 'None'
+    await callback.message.edit_text(text=f'Удалить пользователя {username}',
                                      reply_markup=kb.keyboard_delete_user())
     await callback.answer()
 
