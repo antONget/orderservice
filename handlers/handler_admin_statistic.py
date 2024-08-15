@@ -31,7 +31,11 @@ async def process_get_balans_admin(message: Message) -> None:
         balance = 0
         for key, value in total.items():
             user = await rq.get_user_tg_id(tg_id=key)
-            statistika += f'@{user.username}: {value} руб.\n'
+            if user:
+                username = user.username
+            else:
+                username = 'None'
+            statistika += f'@{username}: {value} руб.\n'
             balance += value
         await message.answer(text=f'<b>Статистика</b>:\n\n'
                                   f'{statistika}'
