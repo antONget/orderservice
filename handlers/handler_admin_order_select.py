@@ -322,17 +322,23 @@ async def process_delete_order(callback: CallbackQuery, bot: Bot) -> None:
     executors_done = await rq.get_executors_status_order_id(order_id=id_order, status=rq.ExecutorStatus.done)
     list_id_tg_done = [done.tg_id for done in executors_done]
     executors_all = await rq.get_executors_order_id(order_id=id_order)
-    # проходим по всем исполнителям, кто успел взять заказ
+
     for executor in executors_all:
         try:
             # удаляем у них сообщение с заказом
             await bot.delete_message(chat_id=executor.tg_id,
                                      message_id=executor.message_id)
+            await rq.delete_executor(tg_id=executor.tg_id, order_id=id_order)
+            # проходим по всем исполнителям, кто успел взять заказ
+            if executor.tg_id in list_id_tg_done:
+                await rq.set_busy_id(telegram_id=executor.tg_id, busy=0)
+
         except:
             await callback.message.answer(text=f'При удалении заказа № {id_order} у пользователя'
                                                f' {(await rq.get_user_tg_id(executor.tg_id)).username} возникла ошибка')
-        if executor.tg_id in list_id_tg_done:
-            await rq.set_busy_id(telegram_id=executor.tg_id, busy=0)
+            await bot.send_message(chat_id=config.tg_bot.support_id,
+                                   text=f'При удалении заказа № {id_order} у пользователя'
+                                        f' {(await rq.get_user_tg_id(executor.tg_id)).username} возникла ошибка')
     await rq.delete_order(order_id=int(id_order))
     await callback.message.answer(text=f'Заказ {id_order} удален!')
     await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
