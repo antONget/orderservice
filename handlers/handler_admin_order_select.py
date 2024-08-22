@@ -296,9 +296,15 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
     for executor in list_mailing:
         result = get_telegram_user(user_id=executor.tg_id, bot_token=config.tg_bot.token)
         if 'result' in result:
-            await bot.edit_message_reply_markup(chat_id=executor.tg_id,
-                                                message_id=executor.message_id,
-                                                reply_markup=kb.keyboard_ready_player(id_order=number_order))
+            try:
+                await bot.edit_message_reply_markup(chat_id=executor.tg_id,
+                                                    message_id=executor.message_id,
+                                                    reply_markup=kb.keyboard_ready_player(id_order=number_order))
+            except:
+                await bot.send_message(chat_id=config.tg_bot.support_id,
+                                       text=f'Заказ № {number_order} пользователь {executor.tg_id} '
+                                            f'@{(await rq.get_user_tg_id(tg_id=executor.tg_id)).username} '
+                                            f'не обновлена клавиатура')
 
     await state.set_state(default_state)
 
