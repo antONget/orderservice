@@ -254,8 +254,8 @@ async def process_send_orders_all(callback: CallbackQuery, state: FSMContext, bo
 
     last_order = [order for order in await rq.get_orders()][-1]
     number_order = last_order.id
-    # список для рассылки
-    list_sandler = [user for user in await rq.get_all_users_not_admin()]
+    # список для рассылки всем пользователям
+    list_sandler = [user for user in await rq.get_all_users()]
     for user in list_sandler:
         # супер-администраторам не отправляем
         if not await check_super_admin(telegram_id=user.telegram_id):
