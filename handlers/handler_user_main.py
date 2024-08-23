@@ -214,11 +214,25 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                                     await bot.send_message(chat_id=chat.channel_id,
                                                            text=f'Замена в заказе №{order_info.id}\n\n'+text_change_user)
                         await asyncio.sleep(1)
-                        number_random = random.choice(executors_done)
-                        # !!! TelegramBadRequest: Telegram server says - Bad Request: message to edit not found
-                        await bot.edit_message_reply_markup(chat_id=number_random.tg_id,
-                                                            message_id=number_random.message_id,
-                                                            reply_markup=kb.keyboard_send_report(id_order=order_id))
+                        # добавляем кнопку отчета исполнителям случайным образом
+                        try:
+                            number_random = random.choice(executors_done)
+                            await bot.edit_message_reply_markup(chat_id=number_random.tg_id,
+                                                                message_id=number_random.message_id,
+                                                                reply_markup=kb.keyboard_send_report(id_order=order_id))
+                        # если случайно не удалось добавить то пытаемся добавить одному из исполнителей
+                        except:
+                            for done in executors_done:
+                                try:
+                                    await bot.edit_message_reply_markup(chat_id=done.tg_id,
+                                                                        message_id=done.message_id,
+                                                                        reply_markup=kb.keyboard_send_report(
+                                                                            id_order=order_id))
+                                    break
+                                except:
+                                    await bot.send_message(chat_id=config.tg_bot.support_id,
+                                                           text=f'ERRROR!!!\nКнопка отчет к заказу № {order_info.id} не добавлена')
+
             # пользователь отказался от выполнения заказа
             else:
                 await callback.message.answer(text=f'Жаль, выполнит заказ другой')
