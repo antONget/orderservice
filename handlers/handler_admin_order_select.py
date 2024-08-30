@@ -341,5 +341,8 @@ async def process_delete_order(callback: CallbackQuery, bot: Bot) -> None:
                                         f' {(await rq.get_user_tg_id(executor.tg_id)).username} возникла ошибка')
     await rq.delete_order(order_id=int(id_order))
     await callback.message.answer(text=f'Заказ {id_order} удален!')
-    await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
+    try:
+        await bot.delete_message(chat_id=callback.message.chat.id, message_id=callback.message.message_id)
+    except:
+        await callback.message.answer('Сообщение можно удалить, только если оно было отправлено менее 48 часов назад')
     await callback.answer()

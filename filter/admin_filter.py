@@ -1,5 +1,5 @@
 from aiogram.filters import BaseFilter
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from config_data.config import load_config, Config
 import database.requests as rq
 import logging
@@ -38,6 +38,24 @@ class IsAdmin(BaseFilter):
         info_user = await rq.get_user_tg_id(tg_id=message.chat.id)
         if info_user:
             return info_user.is_admin == rq.UserRole.admin
+        else:
+            return False
+
+
+class IsUserM(BaseFilter):
+    async def __call__(self, message: Message) -> bool:
+        info_user = await rq.get_user_tg_id(tg_id=message.chat.id)
+        if info_user:
+            return info_user.is_admin == rq.UserRole.admin or info_user.is_admin == rq.UserRole.user
+        else:
+            return False
+
+
+class IsUserC(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> bool:
+        info_user = await rq.get_user_tg_id(tg_id=callback.message.chat.id)
+        if info_user:
+            return info_user.is_admin == rq.UserRole.admin or info_user.is_admin == rq.UserRole.user
         else:
             return False
 

@@ -12,9 +12,11 @@ import asyncio
 import logging
 from config_data.config import Config, load_config
 import database.requests as rq
+from filter.admin_filter import IsUserM, IsUserC
 
 
 router = Router()
+router.callback_query.filter(IsUserC())
 # Загружаем конфиг в переменную config
 config: Config = load_config()
 
