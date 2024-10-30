@@ -17,10 +17,13 @@ async def process_get_balans_admin(message: Message) -> None:
     :return:
     """
     logging.info(f'process_get_balans_admin: {message.chat.id}')
+    # получаем статистику за всех пользователей
     list_orders = await rq.select_all_data_statistic()
 
     # list_statistics: [id, tg_id, cost_order, order_id]
+    # проходим по всем выполненным заказам
     if list_orders:
+        # формируем словарь {tg_id: cost_order}
         total = {}
         for order in list_orders:
             if order.tg_id in total:
@@ -35,7 +38,7 @@ async def process_get_balans_admin(message: Message) -> None:
                 username = user.username
             else:
                 username = 'None'
-            statistika += f'@{username}: {value} руб.\n'
+            statistika += f'@{username}/{key}: {value} руб.\n'
             balance += value
         await message.answer(text=f'<b>Статистика</b>:\n\n'
                                   f'{statistika}'

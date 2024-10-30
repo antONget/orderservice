@@ -30,7 +30,6 @@ class Statistic(Base):
     order_id: Mapped[int] = mapped_column(Integer)
 
 
-
 class Service(Base):
     __tablename__ = 'services'
 
