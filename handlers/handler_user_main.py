@@ -294,10 +294,11 @@ async def process_report_yes(callback: CallbackQuery, state: FSMContext, bot: Bo
     executor_user = await rq.get_executor_tg_id_order_id(tg_id=callback.message.chat.id, order_id=info_order.id)
     executor_done = await rq.get_executors_status_order_id(order_id=info_order.id, status=rq.ExecutorStatus.done)
     for executor in executor_done:
+        user = await rq.get_user_tg_id(executor.tg_id)
         data_statistic = {"tg_id": executor.tg_id,
                           "cost_order": info_order.cost_services,
                           "order_id": info_order.id,
-                          "username": callback.from_user.username}
+                          "username": user.username}
         await rq.add_statistic(data=data_statistic)
         try:
             await bot.delete_message(chat_id=executor.tg_id,
