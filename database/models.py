@@ -26,6 +26,7 @@ class Statistic(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tg_id: Mapped[int] = mapped_column(Integer)
+    username: Mapped[str] = mapped_column(String(50))
     cost_order: Mapped[int] = mapped_column(Integer)
     order_id: Mapped[int] = mapped_column(Integer)
 

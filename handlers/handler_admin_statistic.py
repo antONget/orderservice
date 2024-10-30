@@ -26,19 +26,14 @@ async def process_get_balans_admin(message: Message) -> None:
         # формируем словарь {tg_id: cost_order}
         total = {}
         for order in list_orders:
-            if order.tg_id in total:
-                total[order.tg_id] += order.cost_order
+            if order.username in total:
+                total[order.username] += order.cost_order
             else:
-                total[order.tg_id] = order.cost_order
+                total[order.username] = order.cost_order
         statistika = ''
         balance = 0
         for key, value in total.items():
-            user = await rq.get_user_tg_id(tg_id=key)
-            if user:
-                username = user.username
-            else:
-                username = 'None'
-            statistika += f'@{username}/{key}: {value} руб.\n'
+            statistika += f'@{key}: {value} руб.\n'
             balance += value
         await message.answer(text=f'<b>Статистика</b>:\n\n'
                                   f'{statistika}'
