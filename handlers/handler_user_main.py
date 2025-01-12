@@ -119,9 +119,10 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
             # пользователь согласился выполнить заказ
             if ready == 'yes':
                 # количество исполнителей согласных выполнить заказ
+                executors_status_order_id = await rq.get_executors_status_order_id(order_id=order_id,
+                                                                                   status=rq.ExecutorStatus.done)
                 count_executor = len([executor for executor in
-                                      await rq.get_executors_status_order_id(order_id=order_id,
-                                                                             status=rq.ExecutorStatus.done)])
+                                      executors_status_order_id])
                 # есть ли место в заказе
                 if count_executor >= order_info.count_people:
                     await callback.answer(text='Вы опоздали, заказ собран!'
@@ -134,9 +135,9 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                     for change_executor in change_list:
                         if change_executor.change_id == 0:
                             change_user = await rq.get_user_tg_id(change_executor.tg_id)
-                            # список админов
+                            # список администраторов
                             list_admin = await rq.get_list_admins(is_admin=1)
-                            # информируем админов о произведенной замене
+                            # информируем администраторов о произведенной замене
                             for admin in list_admin:
                                 result = get_telegram_user(user_id=admin.telegram_id, bot_token=config.tg_bot.token)
                                 if 'result' in result:
@@ -155,15 +156,21 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                     await rq.set_busy_id(telegram_id=callback.message.chat.id, busy=1)
 
                     # обновляем клавиатуру с ДА на ЗАМЕНИТЬ
-                    await callback.message.edit_reply_markup(reply_markup=kb.keyboard_change_player(id_order=order_id))
+                    try:
+                        await callback.message.edit_reply_markup(
+                            reply_markup=kb.keyboard_change_player(id_order=order_id))
+                    except:
+                        await callback.message.edit_reply_markup(
+                            reply_markup=kb.keyboard_change_player_(id_order=order_id))
                     await callback.answer(text=f'Отлично вы взяли заказ! '
                                                f'{count_executor + 1}/{order_info.count_people}\n'
                                                f'Вы не можете брать другие заказы, пока не будет получен отчет!',
                                           show_alert=True)
+                    # получаем обновленный список исполнителей готовых выполнить заказ
                     executors_done = [executor for executor in
                                           await rq.get_executors_status_order_id(order_id=order_id,
                                                                                  status=rq.ExecutorStatus.done)]
-                    # если пользователь был последним в списке (пулле) требуемых исполнителей
+                    # если пользователь был последним в списке (пуле) требуемых исполнителей
                     if len(executors_done) == order_info.count_people:
                         # удаляем сообщения с заказами у пользователей которые не готовы выполнять заказ
                         executors_none = await rq.get_executors_status_order_id(order_id=order_id,
@@ -200,6 +207,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
                                 await bot.send_message(chat_id=admin.telegram_id,
                                                        text=f'Заказ № {order_info.id} в работе!\n\n'
                                                             f'{text_player}')
+                        # список пользователей заменившихся в заказе
                         change_list = await rq.get_executors_status_order_id(order_id=order_id,
                                                                              status=rq.ExecutorStatus.change)
                         # формируем информацию о заменах
@@ -238,6 +246,7 @@ async def process_pass_edit_service(callback: CallbackQuery, bot: Bot, state: FS
             # пользователь отказался от выполнения заказа
             else:
                 await callback.message.answer(text=f'Жаль, выполнит заказ другой')
+                # устанавливаем статус у пользователя, что он отменил ввыполнение заказ
                 await rq.set_executors_status_tg_id_order_id(order_id=order_id,
                                                              tg_id=callback.message.chat.id,
                                                              status=rq.ExecutorStatus.cancel)
@@ -263,6 +272,7 @@ async def process_send_report(callback: CallbackQuery, state: FSMContext, bot: B
     await state.update_data(id_order=int(callback.data.split('_')[1]))
     await state.update_data(id_message_order=callback.message.message_id)
     await callback.answer()
+
 
 @router.callback_query(F.data == 'noreport')
 async def process_report_no(callback: CallbackQuery, bot: Bot) -> None:
@@ -292,6 +302,7 @@ async def process_report_yes(callback: CallbackQuery, state: FSMContext, bot: Bo
     data = await state.get_data()
     info_order = await rq.get_order_id(order_id=data['id_order'])
     executor_user = await rq.get_executor_tg_id_order_id(tg_id=callback.message.chat.id, order_id=info_order.id)
+    # список пользователей которые выполняли заказ
     executor_done = await rq.get_executors_status_order_id(order_id=info_order.id, status=rq.ExecutorStatus.done)
     for executor in executor_done:
         user = await rq.get_user_tg_id(executor.tg_id)
@@ -311,6 +322,13 @@ async def process_report_yes(callback: CallbackQuery, state: FSMContext, bot: Bo
 
 @router.message(F.text, StateFilter(User.report1))
 async def process_send_report1(message: Message, state: FSMContext, bot: Bot) -> None:
+    """
+    Получаем ответ на вопрос: "'Какая выкладка у клиента?'"
+    :param message:
+    :param state:
+    :param bot:
+    :return:
+    """
     logging.info(f'process_send_report1: {message.chat.id}')
     await state.update_data(report1=message.text)
     await message.answer(text='Что было выдано на 1-й карте по завершению сопровождения?')
@@ -324,12 +342,20 @@ async def process_send_report1(message: Message, state: FSMContext, bot: Bot) ->
 
 @router.message(F.text, StateFilter(User.report2))
 async def process_send_report2(message: Message, state: FSMContext, bot: Bot) -> None:
+    """
+    Получаем ответ на вопрос: "'Что было выдано на 1-й карте по завершению сопровождения?'"
+    :param message:
+    :param state:
+    :param bot:
+    :return:
+    """
     logging.info(f'process_send_report2: {message.chat.id}')
     await state.update_data(report2=message.text)
     data = await state.get_data()
     info_order = await rq.get_order_id(data['id_order'])
     title_order = info_order.title_services
     cost_order = info_order.cost_services
+    # список исполнителей выполнявших заказ
     executor_done = await rq.get_executors_status_order_id(order_id=info_order.id, status=rq.ExecutorStatus.done)
     # проходим по всем исполнителям заказа
     str_player = ''
@@ -339,7 +365,7 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
             await bot.send_message(chat_id=executor.tg_id,
                                    text=f'<b>ОТЧЁТ по заказу № {data["id_order"]}: {title_order}</b> отправлен!')
         user_info = await rq.get_user_tg_id(executor.tg_id)
-        str_player += f'@{user_info.username}\n'
+        str_player += f'@<a href="tg://user?id={user_info.tg_id}">{user_info.username}</a>\n'
         await rq.set_executors_status_tg_id_order_id(order_id=info_order.id,
                                                      tg_id=executor.tg_id,
                                                      status=rq.ExecutorStatus.complete)
@@ -386,6 +412,11 @@ async def process_get_balans(message: Message) -> None:
 # ЗАМЕНА
 @router.callback_query(F.data.startswith('change_player_'))
 async def process_confirm_change_player(callback: CallbackQuery) -> None:
+    """
+    Пользователь нажал кнопка "Замена" после того как согласился выполнить заказ
+    :param callback:
+    :return:
+    """
     logging.info(f'process_confirm_change_player: {callback.message.chat.id}')
     id_order = callback.data.split('_')[2]
     await callback.message.answer(text=f'Вы точно хотите отменить заказ?',
@@ -395,6 +426,12 @@ async def process_confirm_change_player(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith('nochange'))
 async def process_confirm_change_player(callback: CallbackQuery, bot: Bot) -> None:
+    """
+    Отмена проведения замены в заказе
+    :param callback:
+    :param bot:
+    :return:
+    """
     logging.info(f'process_confirm_change_player: {callback.message.chat.id}')
     await bot.delete_message(chat_id=callback.message.chat.id,
                              message_id=callback.message.message_id)
@@ -416,6 +453,7 @@ async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
     # информация о заказе
     info_executor = await rq.get_executor_tg_id_order_id(order_id=id_order,
                                                          tg_id=callback.message.chat.id)
+
     await rq.set_executors_status_tg_id_order_id(order_id=id_order,
                                                  tg_id=info_executor.tg_id,
                                                  status=rq.ExecutorStatus.change)
@@ -441,14 +479,14 @@ async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
         if 'result' in result:
             try:
                 await bot.send_message(chat_id=admin.telegram_id,
-                                       text=f'Пользователь @{callback.from_user.username} отказался'
-                                            f' от заказа № {id_order}')
+                                       text=f'Пользователь @{callback.from_user.username} отказался '
+                                            f'от заказа № {id_order}')
             except:
                 pass
     # если до замены заказ был собран
     order_info = await rq.get_order_id(order_id=id_order)
     if (len(executor_done) + 1) == order_info.count_people:
-        # список пользователей не админов
+        # список пользователей не администраторов
         list_sandler = await rq.get_all_users_not_admin()
         list_mailing = []
         # обновленная информация о заказе
@@ -456,6 +494,7 @@ async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
         # информация об услуге
         service_info = await rq.get_service_id(service_id=info_order.service_id)
         executor_change = await rq.get_executors_status_order_id(order_id=id_order, status=rq.ExecutorStatus.change)
+        # формируем списки готовых выполнить заказ и кто заменился
         list_executor_change = []
         for executor in executor_change:
             list_executor_change.append(executor.tg_id)
@@ -464,6 +503,7 @@ async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
             list_executor_done.append(executor.tg_id)
         # производим рассылку заказа
         for user in list_sandler:
+            # пропускаем пользователей из сформированных списков
             if user.telegram_id in list_executor_done or user.telegram_id in list_executor_change:
                 continue
             result = get_telegram_user(user_id=user.telegram_id, bot_token=config.tg_bot.token)
@@ -472,14 +512,16 @@ async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
                 if not service_info.picture_services == 'None':
                     msg = await bot.send_photo(photo=service_info.picture_services,
                                                chat_id=user.telegram_id,
-                                               caption=f'Появился заказ № {order_info.id} на : {service_info.title_services}.\n'
+                                               caption=f'Появился заказ № {order_info.id} на: '
+                                                       f'{service_info.title_services}.\n'
                                                        f'Стоимость {service_info.cost_services}\n'
                                                        f'Комментарий <code>{order_info.comment}</code>\n'
                                                        f'Готовы выполнить?',
                                                reply_markup=kb.keyboard_ready_player(id_order=id_order))
                 else:
                     msg = await bot.send_message(chat_id=user.telegram_id,
-                                                 text=f'Появился заказ № {order_info.id} на : {service_info.title_services}.\n'
+                                                 text=f'Появился заказ № {order_info.id} на: '
+                                                      f'{service_info.title_services}.\n'
                                                       f'Стоимость {service_info.cost_services}\n'
                                                       f'Комментарий <code>{order_info.comment}</code>\n'
                                                       f'Готовы выполнить?',

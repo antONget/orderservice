@@ -21,6 +21,17 @@ def keyboard_change_player(id_order: int) -> InlineKeyboardMarkup:
     return keyboard
 
 
+def keyboard_change_player_(id_order: int) -> InlineKeyboardMarkup:
+    """
+    Клавиатура для замены в заказе
+    :return:
+    """
+    button_1 = InlineKeyboardButton(text='Зaменить',
+                                    callback_data=f'change_player_{id_order}')
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_1]],)
+    return keyboard
+
+
 def keyboard_send_report(id_order: int) -> InlineKeyboardMarkup:
     """
     Клавиатура добавляет отчет к кнопке ЗАМЕНИТЬ

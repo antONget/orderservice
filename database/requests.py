@@ -90,7 +90,7 @@ async def get_user_tg_id(tg_id: int) -> User:
         return user
 
 
-async def get_list_admins(is_admin: int) -> User:
+async def get_list_admins(is_admin: int) -> list[User]:
     """
     Получаем список администраторов/не администраторов
     :param is_admin:
@@ -206,7 +206,7 @@ async def select_all_data_statistic():
         return await session.scalars(select(Statistic))
 
 
-async def get_statistic_tg_id(tg_id: int) -> Statistic:
+async def get_statistic_tg_id(tg_id: int) -> list[Statistic]:
     """
     Получаем записи из таблицы "Статистика" для пользователя по его id
     :param tg_id:
@@ -257,7 +257,7 @@ async def add_resource(data: dict):
             await session.commit()
 
 
-async def get_channels() -> Channel:
+async def get_channels() -> list[Channel]:
     """
     Получаем ресурсы для публикации
     :return:
@@ -443,7 +443,7 @@ async def get_executor_tg_id_order_id(order_id: int, tg_id: int) -> Executor:
         return await session.scalar(select(Executor).where(Executor.id_order == order_id, Executor.tg_id == tg_id))
 
 
-async def get_executors_status_order_id(order_id: int, status: str) -> Executor:
+async def get_executors_status_order_id(order_id: int, status: str) -> list[Executor]:
     """
     Получаем информацию по исполнителям заказа {order_id} по их статусу
     :param order_id:
@@ -458,7 +458,7 @@ async def get_executors_status_order_id(order_id: int, status: str) -> Executor:
 
 async def set_executors_status_tg_id_order_id(order_id: int, tg_id: int, status: str) -> None:
     """
-    Обновляем статус заказа {order_id} на {status} у пользователя по его id телеграм {tg_id}
+    Обновляем статус заказа в таблице Executor - {order_id} на {status} у пользователя по его id телеграм {tg_id}
     :param order_id:
     :param tg_id:
     :param status:
@@ -502,7 +502,9 @@ async def set_executors_change_tg_id_order_id(order_id: int, tg_id: int, change_
 
 async def delete_executor(tg_id: int, order_id: int):
     """
-    Удаление исполнителя по id
+    Удаление исполнителя по id из таблицы Executor
+    - после того как заказ собран, необходимо очистить сообщения с предложением выполнить заказ у пользователей,
+     которые не изъявили желание его выполнять. При рассылке сообщения с заказом им проставляется статус "none"
     :param tg_id:
     :param order_id:
     :return:
