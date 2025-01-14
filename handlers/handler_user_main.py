@@ -358,7 +358,7 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
     cost_order = info_order.cost_services
     # список исполнителей выполнявших заказ
     executor_done = await rq.get_executors_status_order_id(order_id=info_order.id, status=rq.ExecutorStatus.done)
-    # проходим по всем исполнителям заказа
+    # проходим по всем исполнителям  заказа
     str_player = ''
     for executor in executor_done:
         result = get_telegram_user(user_id=executor.tg_id, bot_token=config.tg_bot.token)
