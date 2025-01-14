@@ -12,6 +12,7 @@ import asyncio
 import logging
 from config_data.config import Config, load_config
 import database.requests as rq
+from database.models import User, Order
 from filter.admin_filter import IsUserM, IsUserC
 
 
@@ -21,7 +22,7 @@ router.callback_query.filter(IsUserC())
 config: Config = load_config()
 
 
-class User(StatesGroup):
+class UserState(StatesGroup):
     get_token = State()
     auth_token = State()
     report1 = State()
@@ -48,14 +49,14 @@ async def process_start_command_user(message: Message, state: FSMContext) -> Non
     logging.info(f'process_start_command_user: {message.chat.id}')
     if not await rq.get_user_tg_id(tg_id=message.chat.id):
         await message.answer(text='Для авторизации в боте пришлите токен который вам отправил администратор')
-        await state.set_state(User.get_token)
+        await state.set_state(UserState.get_token)
     else:
         await message.answer(text='Вы авторизованы в боте, и можете получать заказы на услуги',
                              reply_markup=kb.keyboards_main_user())
 
 
 # проверяем TOKEN
-@router.message(F.text, StateFilter(User.get_token))
+@router.message(F.text, StateFilter(UserState.get_token))
 async def get_token_user(message: Message, state: FSMContext, bot: Bot) -> None:
     """
     Валидация TOKEN введенного пользователем, добавление его в базу и информирование списка администраторов
@@ -317,10 +318,10 @@ async def process_report_yes(callback: CallbackQuery, state: FSMContext, bot: Bo
         except:
             pass
         await rq.set_busy_id(telegram_id=executor.tg_id, busy=0)
-    await state.set_state(User.report1)
+    await state.set_state(UserState.report1)
 
 
-@router.message(F.text, StateFilter(User.report1))
+@router.message(F.text, StateFilter(UserState.report1))
 async def process_send_report1(message: Message, state: FSMContext, bot: Bot) -> None:
     """
     Получаем ответ на вопрос: "'Какая выкладка у клиента?'"
@@ -332,7 +333,7 @@ async def process_send_report1(message: Message, state: FSMContext, bot: Bot) ->
     logging.info(f'process_send_report1: {message.chat.id}')
     await state.update_data(report1=message.text)
     await message.answer(text='Что было выдано на 1-й карте по завершению сопровождения?')
-    await state.set_state(User.report2)
+    await state.set_state(UserState.report2)
     # !!! TelegramBadRequest: Telegram server says - Bad Request: message to delete not found
     # await bot.delete_message(chat_id=message.chat.id,
     #                          message_id=message.message_id)
@@ -340,7 +341,7 @@ async def process_send_report1(message: Message, state: FSMContext, bot: Bot) ->
     #                          message_id=message.message_id-1)
 
 
-@router.message(F.text, StateFilter(User.report2))
+@router.message(F.text, StateFilter(UserState.report2))
 async def process_send_report2(message: Message, state: FSMContext, bot: Bot) -> None:
     """
     Получаем ответ на вопрос: "'Что было выдано на 1-й карте по завершению сопровождения?'"
@@ -352,7 +353,7 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
     logging.info(f'process_send_report2: {message.chat.id}')
     await state.update_data(report2=message.text)
     data = await state.get_data()
-    info_order = await rq.get_order_id(data['id_order'])
+    info_order: Order = await rq.get_order_id(data['id_order'])
     title_order = info_order.title_services
     cost_order = info_order.cost_services
     # список исполнителей выполнявших заказ
@@ -364,8 +365,8 @@ async def process_send_report2(message: Message, state: FSMContext, bot: Bot) ->
         if 'result' in result:
             await bot.send_message(chat_id=executor.tg_id,
                                    text=f'<b>ОТЧЁТ по заказу № {data["id_order"]}: {title_order}</b> отправлен!')
-        user_info = await rq.get_user_tg_id(executor.tg_id)
-        str_player += f'@<a href="tg://user?id={user_info.tg_id}">{user_info.username}</a>\n'
+        user_info: User = await rq.get_user_tg_id(executor.tg_id)
+        str_player += f'@<a href="tg://user?id={user_info.telegram_id}">{user_info.username}</a>\n'
         await rq.set_executors_status_tg_id_order_id(order_id=info_order.id,
                                                      tg_id=executor.tg_id,
                                                      status=rq.ExecutorStatus.complete)
