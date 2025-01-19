@@ -318,20 +318,28 @@ async def process_delete_order(callback: CallbackQuery, bot: Bot) -> None:
     :return:
     """
     logging.info(f'process_delete_order: {callback.message.chat.id}')
+    # получаем номер заказа
     id_order = int(callback.data.split('_')[1])
+    # список пользователей успевших взять заказ
     executors_done = await rq.get_executors_status_order_id(order_id=id_order, status=rq.ExecutorStatus.done)
     list_id_tg_done = [done.tg_id for done in executors_done]
+    # все пользователи кому разослан заказ
     executors_all = await rq.get_executors_order_id(order_id=id_order)
-
+    # проходим по пользователям кому разослали заказ
     for executor in executors_all:
         try:
+            # обнуляем занятость
+            await rq.set_busy_id(telegram_id=executor.tg_id, busy=0)
+            logging.info(f'process_delete_order: rq.set_busy_id {executor.tg_id}')
             # удаляем у них сообщение с заказом
             await bot.delete_message(chat_id=executor.tg_id,
                                      message_id=executor.message_id)
+            logging.info(f'process_delete_order: bot.delete_message {executor.tg_id}')
             await rq.delete_executor(tg_id=executor.tg_id, order_id=id_order)
-            # проходим по всем исполнителям, кто успел взять заказ
-            if executor.tg_id in list_id_tg_done:
-                await rq.set_busy_id(telegram_id=executor.tg_id, busy=0)
+            logging.info(f'process_delete_order: rq.delete_executor {executor.tg_id}')
+            # обнуляем занятость
+            # if executor.tg_id in list_id_tg_done:
+            #     await rq.set_busy_id(telegram_id=executor.tg_id, busy=0)
 
         except:
             await callback.message.answer(text=f'При удалении заказа № {id_order} у пользователя'

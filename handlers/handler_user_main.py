@@ -458,8 +458,13 @@ async def process_change_player(callback: CallbackQuery, bot: Bot) -> None:
     await rq.set_executors_status_tg_id_order_id(order_id=id_order,
                                                  tg_id=info_executor.tg_id,
                                                  status=rq.ExecutorStatus.change)
-    await bot.delete_message(chat_id=callback.message.chat.id,
-                             message_id=info_executor.message_id)
+    try:
+        await bot.delete_message(chat_id=callback.message.chat.id,
+                                 message_id=info_executor.message_id)
+    except:
+        await bot.send_message(chat_id=config.tg_bot.support_id,
+                               text=f'При удалении заказа № {id_order} у пользователя '
+                                    f' {callback.from_user.id} при замене возникла ошибка')
     executor_done = [executor for executor in
                      await rq.get_executors_status_order_id(order_id=id_order,
                                                             status=rq.ExecutorStatus.done)]

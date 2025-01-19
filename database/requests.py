@@ -56,7 +56,7 @@ async def add_user(telegram_id: int, username: str, token: str):
         await session.commit()
 
 
-async def get_all_users() -> User:
+async def get_all_users() -> list[User]:
     """
     Получаем список всех пользователей зарегистрированных в боте
     :return:
@@ -420,7 +420,7 @@ async def add_executor(data: dict) -> None:
         await session.commit()
 
 
-async def get_executors_order_id(order_id: int) -> Executor:
+async def get_executors_order_id(order_id: int) -> list[Executor]:
     """
     Получаем список исполнителей кому был разослан заказ {order_id}
     :param order_id:
