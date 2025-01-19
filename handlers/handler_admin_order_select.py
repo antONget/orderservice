@@ -320,6 +320,7 @@ async def process_delete_order(callback: CallbackQuery, bot: Bot) -> None:
     logging.info(f'process_delete_order: {callback.message.chat.id}')
     # получаем номер заказа
     id_order = int(callback.data.split('_')[1])
+    logging.info(f'process_delete_order: {id_order}')
     # список пользователей успевших взять заказ
     executors_done = await rq.get_executors_status_order_id(order_id=id_order, status=rq.ExecutorStatus.done)
     list_id_tg_done = [done.tg_id for done in executors_done]
@@ -329,6 +330,9 @@ async def process_delete_order(callback: CallbackQuery, bot: Bot) -> None:
     for executor in executors_all:
         try:
             # обнуляем занятость
+            if executor.status_executor == rq.ExecutorStatus.change:
+                await rq.delete_executor(tg_id=executor.tg_id, order_id=id_order)
+                continue
             await rq.set_busy_id(telegram_id=executor.tg_id, busy=0)
             logging.info(f'process_delete_order: rq.set_busy_id {executor.tg_id}')
             # удаляем у них сообщение с заказом
