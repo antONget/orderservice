@@ -9,7 +9,7 @@ import logging
 router = Router()
 
 
-@router.message(F.text == 'Таблица', IsAdmin())
+@router.message(F.text == 'Таблица')
 async def process_get_table(message: Message) -> None:
     """
     Выводим статистику для проекта
@@ -21,7 +21,7 @@ async def process_get_table(message: Message) -> None:
     list_orders = await rq.select_all_data_statistic()
     # проходим по всем выполненным заказам
     if list_orders:
-        statistika = 'Таблица статистики'
+        statistika = 'Таблица статистики\n'
         flag = True
         for i, item in enumerate(list_orders, start=1):
             flag = True

@@ -25,8 +25,9 @@ def keyboards_superadmin_one():
 
 def keyboards_admin_two():
     button_2 = KeyboardButton(text='Пользователь')
+    button_6 = KeyboardButton(text='Таблица')
     button_5 = KeyboardButton(text='<<<')
-    keyboard = ReplyKeyboardMarkup(keyboard=[[button_2], [button_5]],
+    keyboard = ReplyKeyboardMarkup(keyboard=[[button_2], [button_6], [button_5]],
                                    resize_keyboard=True)
     return keyboard
 
