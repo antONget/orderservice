@@ -1,10 +1,10 @@
 from aiogram import Bot, Dispatcher
 from aiogram.types import FSInputFile
 from aiogram.types import ErrorEvent
-
+from aiogram.client.default import DefaultBotProperties
 from handlers import handler_admin_main, handler_user_main, handler_admin_user, handler_admin_admins, \
     handler_admin_clear_busy, handler_admin_statistic, handler_admin_resource, \
-    handler_admin_order_add, handler_admin_order_select, handler_admin_order_change
+    handler_admin_order_add, handler_admin_order_select, handler_admin_order_change, handler_admin_table
 from handlers import other_handlers
 from database.models import async_main
 from config_data.config import Config, load_config
@@ -34,7 +34,7 @@ async def main():
     config: Config = load_config()
 
     # Инициализируем бот и диспетчер
-    bot = Bot(token=config.tg_bot.token, parse_mode='HTML')
+    bot = Bot(token=config.tg_bot.token, default=DefaultBotProperties(parse_mode='HTML'))
     dp = Dispatcher()
 
     # Регистрируем router в диспетчере
@@ -47,9 +47,9 @@ async def main():
     dp.include_router(handler_admin_order_add.router)
     dp.include_router(handler_admin_order_change.router)
     dp.include_router(handler_admin_order_select.router)
+    dp.include_router(handler_admin_table.router)
     dp.include_router(handler_user_main.router)
     dp.include_router(other_handlers.router)
-
 
     @dp.error()
     async def error_handler(event: ErrorEvent):
